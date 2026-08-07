@@ -1,0 +1,41 @@
+# ── Dependencies ──
+node_modules/
+vendor/
+
+# ── Environment ──
+.env
+.env.local
+.env.*.local
+
+# ── Build output ──
+backend/public/build/
+backend/public/hot
+backend/public/storage
+frontend/dist/
+
+# ── Laravel ──
+backend/storage/app/*
+!backend/storage/app/.gitignore
+backend/storage/framework/cache/*
+backend/storage/framework/sessions/*
+backend/storage/framework/testing/*
+backend/storage/framework/views/*
+backend/storage/logs/*
+!backend/storage/logs/.gitignore
+backend/bootstrap/cache/*
+
+# ── IDE ──
+.idea/
+.vscode/
+*.sublime-*
+
+# ── OS ──
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ── Temp ──
+*.log
+*.tmp
+*.swp
+*.swo
