@@ -39,3 +39,10 @@ Desktop.ini
 *.tmp
 *.swp
 *.swo
+
+# ── Python ──
+__pycache__/
+*.pyc
+*.pyo
+*.pt
+!ai-worker/models/*.pt
