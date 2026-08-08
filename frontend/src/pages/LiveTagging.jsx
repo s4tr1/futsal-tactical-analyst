@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react';
 import api from '../api';
-import { Play, Pause, RotateCcw, Target, AlertTriangle, ShieldAlert, Flag, Clock, Trash2, Video } from 'lucide-react';
+import { Play, Pause, RotateCcw, Target, AlertTriangle, ShieldAlert, Flag, Clock, Trash2, Video, ScanEye, Loader2, CheckCircle2, XCircle, BarChart3, Activity, Timer } from 'lucide-react';
 
 export default function LiveTagging() {
   const { matchId: paramMatchId } = useParams();
@@ -12,6 +12,10 @@ export default function LiveTagging() {
   const [players, setPlayers] = useState([]);
   const [selectedPlayer, setSelectedPlayer] = useState(null);
   const [videoData, setVideoData] = useState(null);
+
+  const [trackingStatus, setTrackingStatus] = useState(null);
+  const [trackingSummary, setTrackingSummary] = useState(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
 
   const [half, setHalf] = useState(1);
   const [seconds, setSeconds] = useState(0);
@@ -126,8 +130,36 @@ export default function LiveTagging() {
     }
   };
 
+  const fetchTrackingStatus = async () => {
+    if (!matchId) return;
+    try {
+      const res = await api.get(`/matches/${matchId}/tracking/status`);
+      setTrackingStatus(res.data.data);
+      if (res.data.data.status === 'done') {
+        const sumRes = await api.get(`/matches/${matchId}/tracking/summary`);
+        setTrackingSummary(sumRes.data.data);
+      }
+    } catch {
+      // tracking not available
+    }
+  };
+
+  const handleQueueTracking = async () => {
+    if (!matchId) return;
+    setTrackingLoading(true);
+    try {
+      const res = await api.post(`/matches/${matchId}/tracking/queue`);
+      setTrackingStatus(res.data.data);
+    } catch (err) {
+      alert(err.response?.data?.message || 'Gagal memulai tracking');
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
+  useEffect(() => { if (matchId) fetchTrackingStatus(); }, [matchId]);
+
   const formatTime = (totalSec) => {
-    const m = Math.floor(totalSec / 60);
     const s = totalSec % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
@@ -283,6 +315,126 @@ export default function LiveTagging() {
             <p className="text-[11px] text-purple-300/50 text-center pt-2">
               Tip: Click a player chip above first to associate the event directly with them.
             </p>
+          </div>
+
+          <div className="glass-card p-6 space-y-4 border-purple-500/20">
+            <div className="text-xs font-bold text-purple-400 uppercase tracking-widest border-b border-purple-500/20 pb-3 flex items-center gap-2">
+              <ScanEye className="w-4 h-4 text-cyan-400" />
+              AI TRACKING
+            </div>
+
+            {trackingStatus ? (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-purple-300/70">Status</span>
+                  {trackingStatus.status === 'done' && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-emerald-400">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Done
+                    </span>
+                  )}
+                  {trackingStatus.status === 'processing' && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-blue-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing
+                    </span>
+                  )}
+                  {trackingStatus.status === 'queued' && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-amber-400">
+                      <Timer className="w-3.5 h-3.5" /> Queued
+                    </span>
+                  )}
+                  {trackingStatus.status === 'failed' && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-red-400">
+                      <XCircle className="w-3.5 h-3.5" /> Failed
+                    </span>
+                  )}
+                  {trackingStatus.status === 'none' && (
+                    <span className="text-xs text-purple-400/50">Not started</span>
+                  )}
+                </div>
+
+                {trackingStatus.total_frames_processed > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] text-purple-400/70">
+                      <span>Progress</span>
+                      <span>{trackingStatus.progress}%</span>
+                    </div>
+                    <div className="w-full h-1.5 bg-black/40 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-cyan-500 to-purple-500 rounded-full transition-all"
+                        style={{ width: `${trackingStatus.progress}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-purple-400/50 font-mono">
+                      {trackingStatus.total_frames_processed} frames
+                    </span>
+                  </div>
+                )}
+
+                {trackingSummary && (
+                  <div className="space-y-2 pt-2 border-t border-purple-500/10">
+                    <div className="flex items-center gap-2 text-xs">
+                      <BarChart3 className="w-3.5 h-3.5 text-cyan-400" />
+                      <span className="text-purple-300/70">Possession</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-emerald-400 font-bold w-12">Home</span>
+                      <div className="flex-1 h-2 bg-black/40 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 rounded-full"
+                          style={{ width: `${trackingSummary.ball_possession?.home || 50}%` }}
+                        />
+                      </div>
+                      <span className="text-white font-mono w-10 text-right">{trackingSummary.ball_possession?.home || 0}%</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-blue-400 font-bold w-12">Away</span>
+                      <div className="flex-1 h-2 bg-black/40 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-blue-500 rounded-full"
+                          style={{ width: `${trackingSummary.ball_possession?.away || 50}%` }}
+                        />
+                      </div>
+                      <span className="text-white font-mono w-10 text-right">{trackingSummary.ball_possession?.away || 0}%</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs pt-1">
+                      <Activity className="w-3.5 h-3.5 text-purple-400" />
+                      <span className="text-purple-300/70">
+                        Distance: <span className="text-white font-bold">{trackingSummary.distance_covered?.home || 0}m</span> home / <span className="text-white font-bold">{trackingSummary.distance_covered?.away || 0}m</span> away
+                      </span>
+                    </div>
+                    <div className="text-[10px] text-purple-400/50 font-mono pt-1">
+                      {trackingSummary.total_player_datapoints} player pts • {trackingSummary.total_ball_datapoints} ball pts • {trackingSummary.total_frames_tracked} frames
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-purple-300/50 text-center py-2">
+                No tracking data. Click below to start AI analysis.
+              </p>
+            )}
+
+            <button
+              onClick={handleQueueTracking}
+              disabled={trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued'}
+              className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-2 ${
+                trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued'
+                  ? 'bg-purple-900/30 text-purple-400/50 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white hover:from-cyan-500 hover:to-purple-500 shadow-lg shadow-purple-500/20'
+              }`}
+            >
+              {trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued' ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  {trackingStatus?.status === 'processing' ? 'Processing...' : 'Queued...'}
+                </>
+              ) : (
+                <>
+                  <ScanEye className="w-3.5 h-3.5" />
+                  {trackingStatus?.status === 'done' ? 'Re-Analyze' : 'Start AI Analysis'}
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>

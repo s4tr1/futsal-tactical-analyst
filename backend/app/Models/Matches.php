@@ -42,6 +42,16 @@ class Matches extends Model
         return $this->hasMany(Tactic::class, 'match_id');
     }
 
+    public function playerTracks()
+    {
+        return $this->hasMany(PlayerTrack::class, 'match_id');
+    }
+
+    public function ballTracks()
+    {
+        return $this->hasMany(BallTrack::class, 'match_id');
+    }
+
     public function getResultAttribute(): string
     {
         if ($this->status !== 'finished') return 'pending';
