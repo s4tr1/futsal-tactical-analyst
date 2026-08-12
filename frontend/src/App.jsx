@@ -20,7 +20,7 @@ function ProtectedLayout() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070510] flex items-center justify-center text-purple-400">
+      <div className="min-h-screen bg-root flex items-center justify-center text-purple-400">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent" />
       </div>
     );
@@ -31,7 +31,7 @@ function ProtectedLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-[#070510]">
+    <div className="min-h-screen bg-root">
       {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <Topbar onMenuToggle={() => setSidebarOpen(v => !v)} />
@@ -45,7 +45,7 @@ function AppRoutes() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070510] flex items-center justify-center text-purple-400">
+      <div className="min-h-screen bg-root flex items-center justify-center text-purple-400">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent" />
       </div>
     );

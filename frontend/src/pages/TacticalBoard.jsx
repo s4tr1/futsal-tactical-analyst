@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { Save, Trash2, Move, ArrowRight, Circle, Type, Plus, Play, Pause, SkipBack, SkipForward, Camera, Loader2, Eye, Edit3 } from 'lucide-react';
 import api from '../api';
 
@@ -59,7 +59,7 @@ export default function TacticalBoard() {
       const mList = res.data.data || [];
       setMatches(mList);
       if (mList.length > 0 && !selectedMatchId) setSelectedMatchId(mList[0].id);
-    } catch {}
+    } catch { }
   };
 
   const fetchTactics = async () => {
@@ -78,8 +78,7 @@ export default function TacticalBoard() {
     if (json.arrows) setArrows(json.arrows);
     if (json.zones) setZones(json.zones);
     if (json.texts) setTexts(json.texts);
-    if (json.ball) setBallPos(json.ball);
-    else setBallPos(null);
+    setBallPos(json.ball || null);
   };
 
   const enterPlaybackMode = async () => {
@@ -91,12 +90,10 @@ export default function TacticalBoard() {
     try {
       const res = await api.get(`/matches/${selectedMatchId}/tracking/playback`);
       setPlaybackData(res.data.data);
-    } catch (err) {
+    } catch {
       alert('Gagal memuat data tracking. Pastikan AI tracking sudah selesai.');
       setMode('edit');
-    } finally {
-      setPlaybackLoading(false);
-    }
+    } finally { setPlaybackLoading(false); }
   };
 
   const exitPlaybackMode = () => {
@@ -115,13 +112,8 @@ export default function TacticalBoard() {
 
     const homeTokens = [];
     const awayTokens = [];
-    frame.players.forEach((p, _i) => {
-      const token = {
-        id: `pb_${p.tracking_id}`,
-        number: p.tracking_id,
-        x: p.x * PITCH_W,
-        y: p.y * PITCH_H,
-      };
+    frame.players.forEach((p) => {
+      const token = { id: `pb_${p.tracking_id}`, number: p.tracking_id, x: p.x * PITCH_W, y: p.y * PITCH_H };
       if (p.team === 'home') homeTokens.push(token);
       else awayTokens.push(token);
     });
@@ -135,19 +127,13 @@ export default function TacticalBoard() {
       setTeamBTokens(awayTokens);
     }
 
-    if (frame.ball) {
-      setBallPos({ x: frame.ball.x * PITCH_W, y: frame.ball.y * PITCH_H });
-    } else {
-      setBallPos(null);
-    }
-
+    setBallPos(frame.ball ? { x: frame.ball.x * PITCH_W, y: frame.ball.y * PITCH_H } : null);
     setPlaybackIndex(index);
     playbackIndexRef.current = index;
   }, [playbackData]);
 
   useEffect(() => {
     if (!playbackData?.frames?.length) return;
-
     if (isPlaying) {
       const fps = playbackData.fps / playbackData.sample_rate;
       const frameInterval = 1000 / fps / playSpeed;
@@ -156,19 +142,14 @@ export default function TacticalBoard() {
         if (timestamp - lastFrameTimeRef.current >= frameInterval) {
           lastFrameTimeRef.current = timestamp;
           const nextIndex = playbackIndexRef.current + 1;
-          if (nextIndex >= playbackData.frames.length) {
-            setIsPlaying(false);
-            return;
-          }
+          if (nextIndex >= playbackData.frames.length) { setIsPlaying(false); return; }
           applyPlaybackFrame(nextIndex);
         }
         animFrameRef.current = requestAnimationFrame(animate);
       };
-
       lastFrameTimeRef.current = performance.now();
       animFrameRef.current = requestAnimationFrame(animate);
     }
-
     return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
   }, [isPlaying, playSpeed, playbackData, applyPlaybackFrame]);
 
@@ -181,46 +162,29 @@ export default function TacticalBoard() {
     setIsPlaying(prev => !prev);
   };
 
-  const handleTimelineChange = (e) => {
-    const idx = parseInt(e.target.value);
-    setIsPlaying(false);
-    applyPlaybackFrame(idx);
-  };
+  const handleTimelineChange = (e) => { setIsPlaying(false); applyPlaybackFrame(parseInt(e.target.value)); };
 
   const handleSnapshot = async () => {
     if (!playbackData?.frames?.[playbackIndex]) return;
     const fn = playbackData.frames[playbackIndex].frame_number;
-    const timestamp = playbackData.fps > 0
-      ? `${Math.floor(fn / playbackData.fps / 60)}m${Math.floor((fn / playbackData.fps) % 60)}s`
-      : `F${fn}`;
+    const timestamp = playbackData.fps > 0 ? `${Math.floor(fn / playbackData.fps / 60)}m${Math.floor((fn / playbackData.fps) % 60)}s` : `F${fn}`;
     const name = `Auto-Schema #${selectedMatchId} ${timestamp}`;
-
     try {
-      await api.post(`/matches/${selectedMatchId}/tracking/snapshot-to-tactic`, {
-        frame_number: fn,
-        name,
-      });
+      await api.post(`/matches/${selectedMatchId}/tracking/snapshot-to-tactic`, { frame_number: fn, name });
       setSnapshotMsg(`Saved: "${name}"`);
       setTimeout(() => setSnapshotMsg(''), 3000);
-    } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menyimpan snapshot.');
-    }
+    } catch (err) { alert(err.response?.data?.message || 'Gagal menyimpan snapshot.'); }
   };
 
-  const formatTimestamp = (frameNumber) => {
-    if (!playbackData?.fps) return `F${frameNumber}`;
-    const sec = frameNumber / playbackData.fps;
+  const formatTimestamp = (fn) => {
+    if (!playbackData?.fps) return `F${fn}`;
+    const sec = fn / playbackData.fps;
     return `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, '0')}`;
   };
 
   const getSvgCoords = (e) => {
     const rect = pitchRef.current.getBoundingClientRect();
-    const scaleX = PITCH_W / rect.width;
-    const scaleY = PITCH_H / rect.height;
-    return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
-    };
+    return { x: (e.clientX - rect.left) * (PITCH_W / rect.width), y: (e.clientY - rect.top) * (PITCH_H / rect.height) };
   };
 
   const isOnToken = (mx, my) => {
@@ -232,16 +196,9 @@ export default function TacticalBoard() {
     if (mode === 'playback') return;
     const coords = getSvgCoords(e);
     if (coords.x < MARGIN || coords.y < MARGIN || coords.x > PITCH_W - MARGIN || coords.y > PITCH_H - MARGIN) return;
-
-    if (activeTool === 'select') {
-      const token = isOnToken(coords.x, coords.y);
-      if (token) setDraggedToken(token);
-      return;
-    }
-
-    if (activeTool === 'arrow') { setDrawStart(coords); return; }
-    if (activeTool === 'zone') { setDrawStart(coords); return; }
-    if (activeTool === 'text') { setTextPrompt({ x: coords.x, y: coords.y }); }
+    if (activeTool === 'select') { const token = isOnToken(coords.x, coords.y); if (token) setDraggedToken(token); return; }
+    if (activeTool === 'arrow' || activeTool === 'zone') { setDrawStart(coords); return; }
+    if (activeTool === 'text') setTextPrompt({ x: coords.x, y: coords.y });
   };
 
   const handlePitchMouseMove = (e) => {
@@ -249,25 +206,19 @@ export default function TacticalBoard() {
     const coords = getSvgCoords(e);
     const x = Math.max(MARGIN, Math.min(PITCH_W - MARGIN, coords.x));
     const y = Math.max(MARGIN, Math.min(PITCH_H - MARGIN, coords.y));
-    if (draggedToken.team === 'A') {
-      setTeamATokens(prev => prev.map(t => t.id === draggedToken.id ? { ...t, x, y } : t));
-    } else {
-      setTeamBTokens(prev => prev.map(t => t.id === draggedToken.id ? { ...t, x, y } : t));
-    }
+    if (draggedToken.team === 'A') setTeamATokens(prev => prev.map(t => t.id === draggedToken.id ? { ...t, x, y } : t));
+    else setTeamBTokens(prev => prev.map(t => t.id === draggedToken.id ? { ...t, x, y } : t));
   };
 
   const handlePitchMouseUp = (e) => {
     if (mode === 'playback') return;
     if (draggedToken) { setDraggedToken(null); return; }
     if (!drawStart) return;
-
     const coords = getSvgCoords(e);
     const cx = Math.max(MARGIN, Math.min(PITCH_W - MARGIN, coords.x));
     const cy = Math.max(MARGIN, Math.min(PITCH_H - MARGIN, coords.y));
-
     if (activeTool === 'arrow') {
-      const dist = Math.hypot(cx - drawStart.x, cy - drawStart.y);
-      if (dist > 8) setArrows([...arrows, { id: Date.now(), x1: drawStart.x, y1: drawStart.y, x2: cx, y2: cy }]);
+      if (Math.hypot(cx - drawStart.x, cy - drawStart.y) > 8) setArrows([...arrows, { id: Date.now(), x1: drawStart.x, y1: drawStart.y, x2: cx, y2: cy }]);
       setDrawStart(null);
     }
     if (activeTool === 'zone') {
@@ -293,21 +244,15 @@ export default function TacticalBoard() {
   const handleSaveTactic = async () => {
     if (!selectedMatchId) { alert('Pilih pertandingan terlebih dahulu.'); return; }
     try {
-      const payload = {
-        name: tacticName,
-        canvas_json: { teamA: teamATokens, teamB: teamBTokens, arrows, zones, texts, ball: ballPos }
-      };
-      await api.post(`/matches/${selectedMatchId}/tactics`, payload);
+      await api.post(`/matches/${selectedMatchId}/tactics`, { name: tacticName, canvas_json: { teamA: teamATokens, teamB: teamBTokens, arrows, zones, texts, ball: ballPos } });
       alert('Taktik berhasil disimpan!');
       fetchTactics();
     } catch (err) { alert(err?.response?.data?.message || 'Gagal menyimpan taktik'); }
   };
 
   const handleDeleteTactic = async (id) => {
-    try {
-      await api.delete(`/tactics/${id}`);
-      setTactics(prev => prev.filter(t => t.id !== id));
-    } catch { alert('Gagal menghapus taktik'); }
+    try { await api.delete(`/tactics/${id}`); setTactics(prev => prev.filter(t => t.id !== id)); }
+    catch { alert('Gagal menghapus taktik'); }
   };
 
   const arrowHead = (x1, y1, x2, y2, size = 8) => {
@@ -323,9 +268,9 @@ export default function TacticalBoard() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-purple-500/20 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Interactive Tactical Board</h1>
-          <p className="text-sm text-purple-300/70 mt-1">
-            {mode === 'playback' ? 'AI-powered playback — watch tracked player & ball movement' : 'Design set-pieces, power play routines & defensive formations'}
+          <h1 className="text-2xl font-bold text-heading tracking-tight">Interactive Tactical Board</h1>
+          <p className="text-sm text-secondary mt-1">
+            {mode === 'playback' ? 'AI-powered playback — watch tracked player &amp; ball movement' : 'Design set-pieces, power play routines &amp; defensive formations'}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-wrap">
@@ -367,48 +312,31 @@ export default function TacticalBoard() {
             <button onClick={handlePlayPause} className="btn-primary text-xs py-2 px-4 gap-2">
               {isPlaying ? <><Pause className="w-4 h-4" /> Pause</> : <><Play className="w-4 h-4" /> Play</>}
             </button>
-            <button onClick={() => { setIsPlaying(false); applyPlaybackFrame(0); }} className="btn-secondary text-xs py-2 px-3" title="Restart">
-              <SkipBack className="w-4 h-4" />
-            </button>
-            <button onClick={() => { setIsPlaying(false); if (playbackData?.frames?.length) applyPlaybackFrame(playbackData.frames.length - 1); }} className="btn-secondary text-xs py-2 px-3" title="End">
-              <SkipForward className="w-4 h-4" />
-            </button>
+            <button onClick={() => { setIsPlaying(false); applyPlaybackFrame(0); }} className="btn-secondary text-xs py-2 px-3" title="Restart"><SkipBack className="w-4 h-4" /></button>
+            <button onClick={() => { setIsPlaying(false); if (playbackData?.frames?.length) applyPlaybackFrame(playbackData.frames.length - 1); }} className="btn-secondary text-xs py-2 px-3" title="End"><SkipForward className="w-4 h-4" /></button>
 
             <div className="flex items-center gap-2 text-xs">
               <span className="text-purple-400 font-mono w-16 text-right">
-                {playbackData?.frames?.[playbackIndex]
-                  ? formatTimestamp(playbackData.frames[playbackIndex].frame_number)
-                  : '--:--'}
+                {playbackData?.frames?.[playbackIndex] ? formatTimestamp(playbackData.frames[playbackIndex].frame_number) : '--:--'}
               </span>
-
-              <input
-                type="range" min={0} max={(playbackData?.frames?.length || 1) - 1} value={playbackIndex}
-                onChange={handleTimelineChange}
-                className="flex-1 min-w-[200px] h-2 rounded-lg appearance-none bg-purple-900/30 cursor-pointer
-                  [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:cursor-pointer"
-              />
-
+              <input type="range" min={0} max={(playbackData?.frames?.length || 1) - 1} value={playbackIndex} onChange={handleTimelineChange}
+                className="flex-1 min-w-[200px] h-2 rounded-lg appearance-none bg-purple-900/30 cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-purple-400 [&::-webkit-slider-thumb]:cursor-pointer" />
               <span className="text-purple-400 font-mono w-16">
-                {playbackData?.frames?.length
-                  ? formatTimestamp(playbackData.frames[playbackData.frames.length - 1].frame_number)
-                  : '--:--'}
+                {playbackData?.frames?.length ? formatTimestamp(playbackData.frames[playbackData.frames.length - 1].frame_number) : '--:--'}
               </span>
             </div>
 
             <div className="flex items-center gap-1 ml-auto">
-              <span className="text-[10px] text-purple-400/60 mr-1">Speed:</span>
+              <span className="text-[10px] text-muted mr-1">Speed:</span>
               {[0.5, 1, 2, 4].map(s => (
                 <button key={s} onClick={() => setPlaySpeed(s)}
-                  className={`text-[10px] px-2 py-1 rounded font-mono font-bold transition-all ${
-                    playSpeed === s ? 'bg-purple-500 text-white' : 'bg-purple-900/30 text-purple-400 hover:bg-purple-800/40'
-                  }`}>
+                  className={`text-[10px] px-2 py-1 rounded font-mono font-bold transition-all ${playSpeed === s ? 'bg-purple-500 text-heading' : 'bg-purple-900/30 text-purple-400 hover:bg-purple-800/40'}`}>
                   {s}x
                 </button>
               ))}
             </div>
           </div>
-
-          <div className="flex items-center justify-between text-[10px] text-purple-400/50">
+          <div className="flex items-center justify-between text-[10px] text-muted">
             <span>Frame {playbackData?.frames?.[playbackIndex]?.frame_number ?? '--'}</span>
             <span>{playbackData?.frame_count ?? 0} frames | sampled every {playbackData?.sample_rate ?? 5} frames | ~{playbackData?.fps ?? 30} fps</span>
           </div>
@@ -416,7 +344,7 @@ export default function TacticalBoard() {
       )}
 
       {playbackLoading && (
-        <div className="glass-card p-12 text-center text-purple-400/60">
+        <div className="glass-card p-12 text-center text-muted">
           <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
           Loading tracking playback data...
         </div>
@@ -425,9 +353,9 @@ export default function TacticalBoard() {
       {(!playbackLoading || mode === 'edit') && (
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           <div className="lg:col-span-3">
-            <div ref={pitchRef} className="relative w-full bg-[#0d1a10] border-2 border-purple-500/30 rounded-2xl overflow-hidden shadow-2xl select-none" style={{ aspectRatio: `${PITCH_W}/${PITCH_H}`, cursor: mode === 'playback' ? 'default' : 'crosshair' }}
-              onMouseDown={handlePitchMouseDown} onMouseMove={handlePitchMouseMove} onMouseUp={handlePitchMouseUp}
-            >
+            <div ref={pitchRef} className="relative w-full bg-[#0d1a10] border-2 border-purple-500/30 rounded-2xl overflow-hidden shadow-2xl select-none"
+              style={{ aspectRatio: `${PITCH_W}/${PITCH_H}`, cursor: mode === 'playback' ? 'default' : 'crosshair' }}
+              onMouseDown={handlePitchMouseDown} onMouseMove={handlePitchMouseMove} onMouseUp={handlePitchMouseUp}>
               <svg ref={svgRef} viewBox={`0 0 ${PITCH_W} ${PITCH_H}`} className="absolute inset-0 w-full h-full pointer-events-none">
                 <rect x={MARGIN} y={MARGIN} width={PITCH_W - MARGIN * 2} height={PITCH_H - MARGIN * 2} rx="8" stroke="rgba(168,85,247,0.3)" fill="none" strokeWidth="1.5" />
                 <line x1={PITCH_W / 2} y1={MARGIN} x2={PITCH_W / 2} y2={PITCH_H - MARGIN} stroke="rgba(168,85,247,0.3)" strokeWidth="1.5" />
@@ -453,17 +381,15 @@ export default function TacticalBoard() {
               </svg>
 
               {ballPos && (
-                <div
-                  style={{ left: `${(ballPos.x / PITCH_W) * 100}%`, top: `${(ballPos.y / PITCH_H) * 100}%` }}
-                  className="absolute w-3.5 h-3.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/50 border border-amber-200 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20"
-                />
+                <div style={{ left: `${(ballPos.x / PITCH_W) * 100}%`, top: `${(ballPos.y / PITCH_H) * 100}%` }}
+                  className="absolute w-3.5 h-3.5 rounded-full bg-amber-400 shadow-lg shadow-amber-400/50 border border-amber-200 -translate-x-1/2 -translate-y-1/2 pointer-events-none z-20" />
               )}
 
               {teamATokens.map(t => (
                 <div key={t.id}
                   onMouseDown={(e) => { if (mode === 'playback') return; if (activeTool === 'select') { e.stopPropagation(); setDraggedToken({ ...t, team: 'A' }); } }}
                   style={{ left: `${(t.x / PITCH_W) * 100}%`, top: `${(t.y / PITCH_H) * 100}%` }}
-                  className={`player-token team-a ${mode === 'playback' ? 'pointer-events-none transition-all duration-75' : ''}`}>
+                  className={`player-token team-a flex items-center justify-center ${mode === 'playback' ? 'pointer-events-none transition-all duration-75' : ''}`}>
                   {t.number}
                 </div>
               ))}
@@ -471,23 +397,17 @@ export default function TacticalBoard() {
                 <div key={t.id}
                   onMouseDown={(e) => { if (mode === 'playback') return; if (activeTool === 'select') { e.stopPropagation(); setDraggedToken({ ...t, team: 'B' }); } }}
                   style={{ left: `${(t.x / PITCH_W) * 100}%`, top: `${(t.y / PITCH_H) * 100}%` }}
-                  className={`player-token team-b ${mode === 'playback' ? 'pointer-events-none transition-all duration-75' : ''}`}>
+                  className={`player-token team-b flex items-center justify-center ${mode === 'playback' ? 'pointer-events-none transition-all duration-75' : ''}`}>
                   {t.number}
                 </div>
               ))}
             </div>
 
             {mode === 'playback' && (
-              <div className="mt-3 flex items-center justify-between text-xs text-purple-400/50">
-                <span className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-purple-500" /> Home Team
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-gray-400" /> Away Team
-                </span>
-                <span className="flex items-center gap-2">
-                  <span className="w-3 h-3 rounded-full bg-amber-400" /> Ball
-                </span>
+              <div className="mt-3 flex items-center justify-between text-xs text-muted">
+                <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-purple-500" /> Home Team</span>
+                <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-gray-400" /> Away Team</span>
+                <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-400" /> Ball</span>
                 <span>Refresh browser to reload tracking data if recently completed</span>
               </div>
             )}
@@ -499,12 +419,7 @@ export default function TacticalBoard() {
                 <div className="glass-card p-5 space-y-4">
                   <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider border-b border-purple-500/20 pb-2">Tactical Canvas Tools</h3>
                   <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { id: 'select', label: 'MOVE', icon: Move },
-                      { id: 'arrow', label: 'ARROW', icon: ArrowRight },
-                      { id: 'zone', label: 'ZONE', icon: Circle },
-                      { id: 'text', label: 'LABEL', icon: Type },
-                    ].map(tool => {
+                    {[{ id: 'select', label: 'MOVE', icon: Move }, { id: 'arrow', label: 'ARROW', icon: ArrowRight }, { id: 'zone', label: 'ZONE', icon: Circle }, { id: 'text', label: 'LABEL', icon: Type }].map(tool => {
                       const Icon = tool.icon;
                       return (
                         <button key={tool.id} onClick={() => setActiveTool(tool.id)} className={`tool-btn ${activeTool === tool.id ? 'active' : ''}`}>
@@ -513,7 +428,7 @@ export default function TacticalBoard() {
                       );
                     })}
                   </div>
-                  <p className="text-[10px] text-purple-400/50 text-center">
+                  <p className="text-[10px] text-muted text-center">
                     {activeTool === 'select' && 'Click & drag players to reposition'}
                     {activeTool === 'arrow' && 'Click start → release at end'}
                     {activeTool === 'zone' && 'Click center → drag radius'}
@@ -525,11 +440,11 @@ export default function TacticalBoard() {
                   <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider border-b border-purple-500/20 pb-2">Pitch Tokens</h3>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-purple-200">Our Team (Purple)</span>
+                      <span className="text-xs font-semibold text-primary">Our Team (Purple)</span>
                       <button onClick={() => addToken('A')} className="btn-secondary text-[11px] py-1 px-2.5"><Plus className="w-3 h-3" /> Add</button>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold text-purple-300/60">Opponent (Gray)</span>
+                      <span className="text-xs font-semibold text-muted">Opponent (Gray)</span>
                       <button onClick={() => addToken('B')} className="btn-secondary text-[11px] py-1 px-2.5"><Plus className="w-3 h-3" /> Add</button>
                     </div>
                   </div>
@@ -546,12 +461,12 @@ export default function TacticalBoard() {
               <div className="glass-card p-5 space-y-4">
                 <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider border-b border-purple-500/20 pb-2">Playback Controls</h3>
                 <div className="space-y-2 text-xs">
-                  <p className="text-purple-300/70">Watching AI-tracked player positions animated on the pitch.</p>
-                  <p className="text-purple-400/50">Use the timeline slider to jump to any moment.</p>
-                  <p className="text-purple-400/50">Click <span className="text-cyan-400 font-bold">Snapshot Schema</span> to save current formation as a tactic.</p>
+                  <p className="text-secondary">Watching AI-tracked player positions animated on the pitch.</p>
+                  <p className="text-muted">Use the timeline slider to jump to any moment.</p>
+                  <p className="text-muted">Click <span className="text-cyan-400 font-bold">Snapshot Schema</span> to save current formation as a tactic.</p>
                 </div>
                 {playbackData && (
-                  <div className="text-[10px] text-purple-400/40 font-mono space-y-1 pt-2 border-t border-purple-500/10">
+                  <div className="text-[10px] text-muted font-mono space-y-1 pt-2 border-t border-purple-500/10">
                     <div>Frames: {playbackData.frame_count}</div>
                     <div>Sample Rate: every {playbackData.sample_rate} frames</div>
                     <div>Source FPS: {playbackData.fps}</div>
@@ -563,13 +478,13 @@ export default function TacticalBoard() {
             <div className="glass-card p-5 space-y-4">
               <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider border-b border-purple-500/20 pb-2">Saved Tactics</h3>
               {tactics.length === 0 ? (
-                <p className="text-xs text-purple-400/50 text-center py-4">No saved tactics for this match yet.</p>
+                <p className="text-xs text-muted text-center py-4">No saved tactics for this match yet.</p>
               ) : (
                 <div className="space-y-2 max-h-48 overflow-y-auto">
                   {tactics.map(t => (
                     <div key={t.id} className="flex items-center justify-between p-2 rounded-lg bg-black/20 border border-purple-500/10 text-xs">
-                      <button onClick={() => loadTactic(t)} className="text-purple-200 hover:text-white text-left flex-1 truncate">{t.name}</button>
-                      <button onClick={() => handleDeleteTactic(t.id)} className="text-purple-400/50 hover:text-red-400 p-1"><Trash2 className="w-3 h-3" /></button>
+                      <button onClick={() => loadTactic(t)} className="text-primary hover:text-heading text-left flex-1 truncate">{t.name}</button>
+                      <button onClick={() => handleDeleteTactic(t.id)} className="text-muted hover:text-red-400 p-1"><Trash2 className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -582,7 +497,7 @@ export default function TacticalBoard() {
       {textPrompt && mode === 'edit' && (
         <div className="modal-overlay" onClick={() => setTextPrompt(null)}>
           <form onSubmit={handleTextSubmit} className="modal-box" onClick={e => e.stopPropagation()}>
-            <h3 className="text-sm font-bold text-white mb-3">Enter Label Text</h3>
+            <h3 className="text-sm font-bold text-heading mb-3">Enter Label Text</h3>
             <input name="text" autoFocus className="input-dark mb-4" placeholder="e.g. Press, Cover" maxLength={20} />
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => setTextPrompt(null)} className="btn-secondary text-xs">Cancel</button>

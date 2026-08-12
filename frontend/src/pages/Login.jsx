@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, Shield, ArrowRight } from 'lucide-react';
@@ -26,7 +26,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-[#070510] flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-root flex items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute -top-60 -right-60 w-[500px] h-[500px] rounded-full bg-purple-700/10 blur-3xl" />
         <div className="absolute top-1/2 -left-60 w-[400px] h-[400px] rounded-full bg-indigo-700/8 blur-3xl" />
@@ -38,15 +38,15 @@ export default function Login() {
           <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-700 to-purple-500 shadow-lg shadow-purple-500/25 mb-5">
             <Shield className="w-7 h-7 text-white" />
           </div>
-          <h1 className="text-2xl font-black text-[#ede9fe] tracking-tight leading-tight">
+          <h1 className="text-2xl font-black text-heading tracking-tight leading-tight">
             FUTSIGHT
           </h1>
-          <p className="text-xs text-[#5b5575] font-semibold tracking-widest uppercase mt-1.5">
+          <p className="text-xs text-muted font-semibold tracking-widest uppercase mt-1.5">
             Futsal Tactical Analyst
           </p>
         </div>
 
-        <div className="glass-card p-8 border-[#7c3aed]/20 rounded-2xl">
+        <div className="glass-card p-8 rounded-2xl">
           {error && (
             <div className="mb-6 p-3.5 rounded-xl bg-red-500/8 border border-red-500/20 text-red-400 text-xs font-medium text-center">
               {error}
@@ -57,7 +57,7 @@ export default function Login() {
             <div>
               <label>Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5b5575]" />
+                <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   required placeholder="analyst@team.com" className="input-dark pl-10"
@@ -68,20 +68,12 @@ export default function Login() {
             <div>
               <label>Password</label>
               <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5b5575]" />
+                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
                 <input
                   type="password" value={password} onChange={e => setPassword(e.target.value)}
                   required placeholder="••••••••" className="input-dark pl-10"
                 />
               </div>
-            </div>
-
-            <div className="flex items-center justify-between text-xs text-[#a5a0c4] pt-1">
-              <label className="flex items-center gap-2 cursor-pointer !mb-0">
-                <input type="checkbox" defaultChecked className="rounded bg-black/40 border-purple-500/30 accent-purple-600" />
-                <span>Remember session</span>
-              </label>
-              <a href="#" className="hover:text-purple-400 transition-colors">Forgot password?</a>
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full py-3 justify-center text-sm">
@@ -93,11 +85,11 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="mt-8 pt-5 border-t border-[#7c3aed]/10 text-center">
-            <p className="text-xs text-[#5b5575]">
-              Demo: <span className="text-[#a5a0c4] font-mono text-[11px]">analyst@team.com</span>
+          <div className="mt-8 pt-5 border-t border-purple-500/10 text-center">
+            <p className="text-xs text-muted">
+              Demo: <span className="text-secondary font-mono text-[11px]">analyst@team.com</span>
               <span className="mx-1.5 text-[#3d3755]">/</span>
-              <span className="text-[#a5a0c4] font-mono text-[11px]">password</span>
+              <span className="text-secondary font-mono text-[11px]">password</span>
             </p>
           </div>
         </div>

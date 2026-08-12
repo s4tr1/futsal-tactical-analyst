@@ -9,29 +9,27 @@ export default function Topbar({ onMenuToggle }) {
     : 'U';
 
   return (
-    <header className="topbar">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <button onClick={onMenuToggle} className="md:hidden" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 4 }}>
+    <header className="topbar flex items-center justify-between">
+      <div className="flex items-center gap-3">
+        <button onClick={onMenuToggle} className="md:hidden p-1 text-muted cursor-pointer rounded hover:text-secondary">
           <Menu size={22} />
         </button>
         <span className="topbar-title">Futsal Analyst</span>
       </div>
 
       <div className="topbar-actions">
-        <button className="topbar-bell">
+        <button className="topbar-bell flex items-center">
           <Bell size={18} />
           <span className="topbar-bell-dot" />
         </button>
         <button
           onClick={logout}
           title="Logout"
-          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 5, borderRadius: 8, display: 'flex', alignItems: 'center' }}
-          onMouseEnter={e => e.currentTarget.style.color = '#f87171'}
-          onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+          className="p-1.5 rounded-lg text-muted cursor-pointer flex items-center hover:text-red-400 transition-colors"
         >
           <LogOut size={18} />
         </button>
-        <div className="nav-user-avatar">{initials}</div>
+        <div className="nav-user-avatar flex items-center justify-center">{initials}</div>
       </div>
     </header>
   );

@@ -299,6 +299,8 @@ futsal-tactical-analyst/
     00-overview  ·  01-requirements  ·  02-architecture
     03-database-schema  ·  04-api-endpoints  ·  05-workflow
     06-testing  ·  07-roadmap  ·  08-ai-tracking-plan
+    09-flow-system  ·  10-architecture-model-workflow  ·  11-flowcharts
+    12-skripsi-proposal
 ```
 
 ---

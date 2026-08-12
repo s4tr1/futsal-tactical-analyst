@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../api';
-import { PieChart, Users, BarChart3 } from 'lucide-react';
+import { BarChart3, Users } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function Statistics() {
@@ -13,15 +13,8 @@ export default function Statistics() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchInitialMatches();
-  }, []);
-
-  useEffect(() => {
-    if (matchId) {
-      fetchMatchStats();
-    }
-  }, [matchId]);
+  useEffect(() => { fetchInitialMatches(); }, []);
+  useEffect(() => { if (matchId) fetchMatchStats(); }, [matchId]);
 
   const fetchInitialMatches = async () => {
     try {
@@ -31,12 +24,8 @@ export default function Statistics() {
       const res = await api.get(`/teams/${teamId}/matches`);
       const mList = res.data.data || [];
       setMatches(mList);
-      if (mList.length > 0 && !matchId) {
-        setMatchId(mList[0].id);
-      }
-    } catch (err) {
-      console.error('Failed to fetch matches list:', err);
-    }
+      if (mList.length > 0 && !matchId) setMatchId(mList[0].id);
+    } catch (err) { console.error('Failed to fetch matches list:', err); }
   };
 
   const fetchMatchStats = async () => {
@@ -44,89 +33,64 @@ export default function Statistics() {
       setLoading(true);
       const res = await api.get(`/matches/${matchId}/statistics`);
       setStats(res.data.data);
-    } catch (err) {
-      console.error('Failed to fetch match stats:', err);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header Bar & Selector */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-purple-500/20 pb-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Advanced Match Analytics</h1>
-          <p className="text-sm text-purple-300/70 mt-1">Detailed performance breakdown & telemetry stats</p>
+          <h1 className="text-2xl font-bold text-heading tracking-tight">Advanced Match Analytics</h1>
+          <p className="text-sm text-secondary mt-1">Detailed performance breakdown &amp; telemetry stats</p>
         </div>
-
-        <select
-          value={matchId}
-          onChange={(e) => setMatchId(parseInt(e.target.value))}
-          className="input-dark text-xs w-auto min-w-[240px]"
-        >
-          {matches.map((m) => (
-            <option key={m.id} value={m.id}>
-              #{m.id} vs {m.opponent_name} ({m.match_date || 'N/A'})
-            </option>
-          ))}
+        <select value={matchId} onChange={(e) => setMatchId(parseInt(e.target.value))} className="input-dark text-xs w-auto min-w-[240px]">
+          {matches.map((m) => (<option key={m.id} value={m.id}>#{m.id} vs {m.opponent_name} ({m.match_date || 'N/A'})</option>))}
         </select>
       </div>
 
       {loading ? (
-        <div className="glass-card p-12 text-center text-purple-400/60">
+        <div className="glass-card p-12 text-center text-muted">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent mx-auto mb-4" />
           Calculating match statistics...
         </div>
       ) : !stats ? (
-        <div className="glass-card p-12 text-center text-purple-300/60">
-          No statistics telemetry recorded for this match yet.
-        </div>
+        <div className="glass-card p-12 text-center text-muted">No statistics telemetry recorded for this match yet.</div>
       ) : (
         <div className="space-y-6">
-          {/* Key Metrics Cards */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
             <div className="stat-card">
               <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Goals Scored</span>
-              <div className="text-3xl font-extrabold text-white mt-2">{stats.goals}</div>
-              <div className="text-xs text-purple-300/60 mt-1">Primary Scoring Event</div>
+              <div className="text-3xl font-extrabold text-heading mt-2">{stats.goals}</div>
+              <div className="text-xs text-muted mt-1">Primary Scoring Event</div>
             </div>
-
             <div className="stat-card">
               <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Shot Accuracy</span>
-              <div className="text-3xl font-extrabold text-white mt-2">{stats.shot_accuracy}%</div>
-              <div className="text-xs text-purple-300/60 mt-1">{stats.shots} total shot attempts</div>
+              <div className="text-3xl font-extrabold text-heading mt-2">{stats.shot_accuracy}%</div>
+              <div className="text-xs text-muted mt-1">{stats.shots} total shot attempts</div>
             </div>
-
             <div className="stat-card">
               <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Fouls Committed</span>
-              <div className="text-3xl font-extrabold text-white mt-2">{stats.fouls}</div>
-              <div className="text-xs text-purple-300/60 mt-1">Futsal 6-foul penalty limit</div>
+              <div className="text-3xl font-extrabold text-heading mt-2">{stats.fouls}</div>
+              <div className="text-xs text-muted mt-1">Futsal 6-foul penalty limit</div>
             </div>
-
             <div className="stat-card">
-              <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Turnovers (Lost Ball)</span>
-              <div className="text-3xl font-extrabold text-white mt-2">{stats.turnovers}</div>
-              <div className="text-xs text-purple-300/60 mt-1">Unforced possession losses</div>
+              <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">Turnovers</span>
+              <div className="text-3xl font-extrabold text-heading mt-2">{stats.turnovers}</div>
+              <div className="text-xs text-muted mt-1">Unforced possession losses</div>
             </div>
           </div>
 
-          {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Player Performance Bar Chart */}
             <div className="glass-card p-6 space-y-4">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                <BarChart3 className="w-4 h-4 text-purple-400" /> Player Goal & Shot Output
+              <h3 className="text-sm font-bold text-heading uppercase tracking-wide flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-purple-400" /> Player Goal &amp; Shot Output
               </h3>
-
               <div className="h-64 w-full pt-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.player_stats || []}>
                     <XAxis dataKey="name" stroke="#a89fc4" fontSize={11} />
                     <YAxis stroke="#a89fc4" fontSize={11} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#17132e', borderColor: '#8b5cf6', borderRadius: '8px', color: '#ddd6fe' }}
-                    />
+                    <Tooltip contentStyle={{ backgroundColor: '#17132e', borderColor: '#8b5cf6', borderRadius: '8px', color: '#ddd6fe' }} />
                     <Bar dataKey="goals" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Goals" />
                     <Bar dataKey="shots" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Shots" />
                   </BarChart>
@@ -134,62 +98,34 @@ export default function Statistics() {
               </div>
             </div>
 
-            {/* Event Distribution */}
             <div className="glass-card p-6 space-y-4">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
-                <PieChart className="w-4 h-4 text-purple-400" /> Match Event Breakdown
+              <h3 className="text-sm font-bold text-heading uppercase tracking-wide flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-purple-400" /> Match Event Breakdown
               </h3>
-
               <div className="space-y-4 pt-2">
-                <div>
-                  <div className="flex justify-between text-xs text-purple-300 mb-1">
-                    <span>Goals ({stats.goals})</span>
-                    <span>{stats.goals + stats.shots > 0 ? Math.round((stats.goals / (stats.goals + stats.shots)) * 100) : 0}% Conversion</span>
+                {[
+                  { label: 'Goals', value: stats.goals, color: 'bg-emerald-500', scale: 20 },
+                  { label: 'Shots', value: stats.shots, color: 'bg-blue-500', scale: 15 },
+                  { label: 'Fouls', value: stats.fouls, color: 'bg-amber-500', scale: 20 },
+                  { label: 'Turnovers', value: stats.turnovers, color: 'bg-purple-500', scale: 15 },
+                ].map(({ label, value, color, scale }) => (
+                  <div key={label}>
+                    <div className="flex justify-between text-xs text-secondary mb-1">
+                      <span>{label} ({value})</span>
+                    </div>
+                    <div className="progress-bar">
+                      <div className={`progress-fill ${color}`} style={{ width: `${Math.min(100, value * scale)}%` }} />
+                    </div>
                   </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill bg-emerald-500" style={{ width: `${Math.min(100, stats.goals * 20)}%` }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs text-purple-300 mb-1">
-                    <span>Shots ({stats.shots})</span>
-                    <span>Volume Rating</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill bg-blue-500" style={{ width: `${Math.min(100, stats.shots * 15)}%` }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs text-purple-300 mb-1">
-                    <span>Fouls ({stats.fouls})</span>
-                    <span>Infraction Level</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill bg-amber-500" style={{ width: `${Math.min(100, stats.fouls * 20)}%` }} />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between text-xs text-purple-300 mb-1">
-                    <span>Turnovers ({stats.turnovers})</span>
-                    <span>Possession Loss</span>
-                  </div>
-                  <div className="progress-bar">
-                    <div className="progress-fill bg-purple-500" style={{ width: `${Math.min(100, stats.turnovers * 15)}%` }} />
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Player Breakdown Table */}
           <div className="glass-card p-6 space-y-4">
-            <h3 className="text-sm font-bold text-white uppercase tracking-wide flex items-center gap-2">
+            <h3 className="text-sm font-bold text-heading uppercase tracking-wide flex items-center gap-2">
               <Users className="w-4 h-4 text-purple-400" /> Individual Player Box Score
             </h3>
-
             <div className="overflow-x-auto">
               <table>
                 <thead>
@@ -206,7 +142,7 @@ export default function Statistics() {
                   {(stats.player_stats || []).map((p, idx) => (
                     <tr key={idx}>
                       <td className="font-mono font-bold text-purple-400">#{p.jersey}</td>
-                      <td className="font-bold text-white">{p.name}</td>
+                      <td className="font-bold text-heading">{p.name}</td>
                       <td className="font-mono text-emerald-400 font-bold">{p.goals}</td>
                       <td className="font-mono text-blue-400">{p.shots}</td>
                       <td className="font-mono text-amber-400">{p.fouls}</td>
@@ -214,11 +150,7 @@ export default function Statistics() {
                     </tr>
                   ))}
                   {(!stats.player_stats || stats.player_stats.length === 0) && (
-                    <tr>
-                      <td colSpan={6} className="text-center text-purple-400/50 py-6">
-                        No individual player events logged for this match yet.
-                      </td>
-                    </tr>
+                    <tr><td colSpan={6} className="text-center text-muted py-6">No individual player events logged for this match yet.</td></tr>
                   )}
                 </tbody>
               </table>

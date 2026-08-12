@@ -20,6 +20,10 @@ Folder ini adalah pemecahan dari 1 dokumen masterplan menjadi beberapa file mark
 | [`docs/05-workflow-timeline.md`](docs/05-workflow-timeline.md) | Development Workflow, Milestone, Task Breakdown |
 | [`docs/06-testing-risk-safety.md`](docs/06-testing-risk-safety.md) | Testing Plan, Risk Assessment, Hardware Safety |
 | [`docs/07-roadmap-deliverables.md`](docs/07-roadmap-deliverables.md) | Future Roadmap, Deliverables, Success Criteria |
+| [`docs/09-flow-system.md`](docs/09-flow-system.md) | 🆕 Flow Sistem end-to-end (auth, upload, tracking, tagging, statistik) |
+| [`docs/10-architecture-model-workflow.md`](docs/10-architecture-model-workflow.md) | 🆕 Flow Arsitektur three-tier & workflow model AI (pipeline CV) |
+| [`docs/11-flowcharts.md`](docs/11-flowcharts.md) | 🆕 Kumpulan flowchart Mermaid untuk setiap proses |
+| [`docs/12-skripsi-proposal.md`](docs/12-skripsi-proposal.md) | 🆕 Proposal skripsi (bidang minat Data Science) untuk dosen pembimbing |
 | [`REVIEW.md`](REVIEW.md) | Catatan review: apa yang sudah kuat & apa yang masih perlu diperjelas sebelum mulai coding |
 
 ## Cara Pakai

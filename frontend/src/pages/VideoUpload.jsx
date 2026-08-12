@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { UploadCloud, FileVideo, CheckCircle2, Film, AlertCircle } from 'lucide-react';
 import api from '../api';
 
@@ -13,15 +13,8 @@ export default function VideoUpload() {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchMatches();
-  }, []);
-
-  useEffect(() => {
-    if (matchId) {
-      fetchVideos();
-    }
-  }, [matchId]);
+  useEffect(() => { fetchMatches(); }, []);
+  useEffect(() => { if (matchId) fetchVideos(); }, [matchId]);
 
   const fetchMatches = async () => {
     try {
@@ -32,42 +25,23 @@ export default function VideoUpload() {
       const res = await api.get(`/teams/${teamId}/matches`);
       const mList = res.data.data || [];
       setMatches(mList);
-      if (mList.length > 0) {
-        setMatchId(mList[0].id);
-      }
-    } catch (err) {
-      console.error('Failed to fetch matches:', err);
-    } finally {
-      setLoading(false);
-    }
+      if (mList.length > 0) setMatchId(mList[0].id);
+    } finally { setLoading(false); }
   };
 
   const fetchVideos = async () => {
+    if (!matchId) return;
     try {
-      const results = [];
-      for (const m of matches) {
-        try {
-          const res = await api.get(`/matches/${m.id}/video`);
-          if (res.data.data) {
-            results.push({ ...res.data.data, match: m });
-          }
-        } catch {
-          // No video uploaded for this match
-        }
-      }
-      setVideos(results);
-    } catch (err) {
-      console.error('Failed to fetch videos:', err);
-    }
+      const res = await api.get(`/matches/${matchId}/video`);
+      if (res.data.data) setVideos([res.data.data]);
+      else setVideos([]);
+    } catch { setVideos([]); }
   };
 
   const handleFileSelect = (e) => {
     const file = e.target.files[0];
     if (file) {
-      if (file.size > 500 * 1024 * 1024) {
-        setErrorMsg('Ukuran file maksimal 500 MB.');
-        return;
-      }
+      if (file.size > 500 * 1024 * 1024) { setErrorMsg('Ukuran file maksimal 500 MB.'); return; }
       setSelectedFile(file);
       setErrorMsg('');
     }
@@ -76,55 +50,40 @@ export default function VideoUpload() {
   const handleUpload = async () => {
     if (!selectedFile || !matchId) return;
     setUploading(true);
-    setProgress(20);
+    setProgress(0);
     setErrorMsg('');
     setSuccessMsg('');
 
     try {
       const formData = new FormData();
       formData.append('video', selectedFile);
-
-      await api.post(`http://127.0.0.1:8000/api/matches/${matchId}/video`, formData, {
+      await api.post(`/matches/${matchId}/video`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 600000,
-        onUploadProgress: (e) => {
-          if (e.total) {
-            setProgress(Math.round((e.loaded / e.total) * 100));
-          }
-        },
+        onUploadProgress: (e) => { if (e.total) setProgress(Math.round((e.loaded / e.total) * 100)); },
       });
-
       setProgress(100);
       setSuccessMsg(`Video "${selectedFile.name}" berhasil diunggah!`);
       setSelectedFile(null);
       fetchVideos();
     } catch (err) {
       setErrorMsg(err.response?.data?.message || 'Gagal mengunggah video.');
-    } finally {
-      setUploading(false);
-    }
+    } finally { setUploading(false); }
   };
 
-  const formatBytes = (bytes) => {
-    if (!bytes) return 'Unknown';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-  };
+  const formatBytes = (bytes) => bytes ? (bytes / (1024 * 1024)).toFixed(1) + ' MB' : 'Unknown';
 
   return (
     <div className="space-y-6 animate-fade-in max-w-4xl mx-auto">
       <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight">Match Video Upload Center</h1>
-        <p className="text-sm text-purple-300/70 mt-1">Upload raw match recording for automated telemetry & replay clipping</p>
+        <h1 className="text-2xl font-bold text-heading tracking-tight">Match Video Upload Center</h1>
+        <p className="text-sm text-secondary mt-1">Upload raw match recording for automated telemetry &amp; replay clipping</p>
       </div>
 
       <div className="flex items-center gap-3">
         <span className="text-xs text-purple-400 font-semibold">Match:</span>
         <select value={matchId || ''} onChange={(e) => setMatchId(parseInt(e.target.value))} className="input-dark text-xs w-auto min-w-[220px]">
-          {matches.map((m) => (
-            <option key={m.id} value={m.id}>
-              #{m.id} vs {m.opponent_name} ({m.status})
-            </option>
-          ))}
+          {matches.map((m) => (<option key={m.id} value={m.id}>#{m.id} vs {m.opponent_name} ({m.status})</option>))}
         </select>
       </div>
 
@@ -132,11 +91,9 @@ export default function VideoUpload() {
         <label className="drop-zone block cursor-pointer">
           <input type="file" accept="video/mp4,video/mov,video/avi" onChange={handleFileSelect} className="hidden" />
           <UploadCloud className="w-16 h-16 text-purple-400 mx-auto mb-4 animate-bounce" />
-          <h3 className="text-lg font-bold text-white">Drag & Drop Footage Here</h3>
-          <p className="text-xs text-purple-300/60 mt-1">Supports MP4, MOV, AVI (Max File Size 500 MB)</p>
-          <button type="button" className="btn-secondary text-xs mt-4">
-            Browse Video Files
-          </button>
+          <h3 className="text-lg font-bold text-heading">Drag &amp; Drop Footage Here</h3>
+          <p className="text-xs text-muted mt-1">Supports MP4, MOV, AVI (Max File Size 500 MB)</p>
+          <button type="button" className="btn-secondary text-xs mt-4">Browse Video Files</button>
         </label>
 
         {selectedFile && (
@@ -144,8 +101,8 @@ export default function VideoUpload() {
             <div className="flex items-center gap-3">
               <FileVideo className="w-8 h-8 text-purple-400" />
               <div>
-                <div className="text-sm font-bold text-white">{selectedFile.name}</div>
-                <div className="text-xs text-purple-300/60 font-mono">{formatBytes(selectedFile.size)}</div>
+                <div className="text-sm font-bold text-heading">{selectedFile.name}</div>
+                <div className="text-xs text-muted font-mono">{formatBytes(selectedFile.size)}</div>
               </div>
             </div>
             <button onClick={handleUpload} disabled={uploading} className="btn-primary text-xs py-2 px-4">
@@ -171,7 +128,6 @@ export default function VideoUpload() {
             <CheckCircle2 className="w-4 h-4" /> {successMsg}
           </div>
         )}
-
         {errorMsg && (
           <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-semibold flex items-center gap-2">
             <AlertCircle className="w-4 h-4" /> {errorMsg}
@@ -180,14 +136,13 @@ export default function VideoUpload() {
       </div>
 
       <div className="glass-card p-6 space-y-4">
-        <h3 className="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+        <h3 className="text-sm font-bold text-heading uppercase tracking-wider flex items-center gap-2">
           <Film className="w-4 h-4 text-purple-400" /> Uploaded Footage Archive
         </h3>
-
         {loading ? (
-          <div className="text-center py-4 text-xs text-purple-400/60">Loading videos...</div>
+          <div className="text-center py-4 text-xs text-muted">Loading videos...</div>
         ) : videos.length === 0 ? (
-          <div className="text-center py-4 text-xs text-purple-400/50">No videos uploaded yet. Select a match and upload a video.</div>
+          <div className="text-center py-4 text-xs text-muted">No videos uploaded yet. Select a match and upload a video.</div>
         ) : (
           <div className="space-y-3">
             {videos.map((v) => (
@@ -195,10 +150,8 @@ export default function VideoUpload() {
                 <div className="flex items-center gap-3">
                   <FileVideo className="w-6 h-6 text-purple-400" />
                   <div>
-                    <div className="text-sm font-bold text-white">{v.original_name || 'Video #' + v.id}</div>
-                    <div className="text-xs text-purple-400/60 font-mono">
-                      Match #{v.match_id} vs {v.match?.opponent_name || ''} &bull; {formatBytes(v.file_size)}
-                    </div>
+                    <div className="text-sm font-bold text-heading">{v.original_name || 'Video #' + v.id}</div>
+                    <div className="text-xs text-muted font-mono">Match #{v.match_id} &bull; {formatBytes(v.file_size)}</div>
                   </div>
                 </div>
                 <span className="badge badge-victory">UPLOADED</span>

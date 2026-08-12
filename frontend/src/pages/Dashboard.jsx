@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 import { Trophy, Target, Activity, Plus, Crosshair, FileText, ArrowUpRight, Calendar } from 'lucide-react';
@@ -12,9 +12,7 @@ export default function Dashboard() {
   const [team, setTeam] = useState(null);
   const [lastStats, setLastStats] = useState(null);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
+  useEffect(() => { fetchDashboardData(); }, []);
 
   const fetchDashboardData = async () => {
     try {
@@ -44,30 +42,24 @@ export default function Dashboard() {
     }
   };
 
-  // Metrics calculations
   const finishedMatches = matches.filter(m => m.status === 'finished');
   const wins = finishedMatches.filter(m => m.result === 'victory' || m.score_team > m.score_opponent).length;
-  const winRate = finishedMatches.length > 0 ? round((wins / finishedMatches.length) * 100, 0) : 0;
-  
+  const winRate = finishedMatches.length > 0 ? Math.round((wins / finishedMatches.length) * 100) : 0;
+
   const totalGoals = finishedMatches.reduce((acc, m) => acc + (m.score_team || 0), 0);
   const avgGoals = finishedMatches.length > 0 ? (totalGoals / finishedMatches.length).toFixed(1) : '0.0';
 
   const liveMatch = matches.find(m => m.status === 'live');
 
-  function round(val, dec) {
-    return Number(Math.round(val + 'e' + dec) + 'e-' + dec);
-  }
-
   return (
     <div className="space-y-8 animate-fade-in">
-      {/* Top Welcome Banner */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-[22px] font-bold text-[#ede9fe] tracking-tight">
-            Welcome Back, <span className="text-[#a78bfa]">{user?.name || 'Coach'}</span>
+          <h1 className="text-[22px] font-bold text-heading tracking-tight">
+            Welcome Back, <span className="text-accent-strong">{user?.name || 'Coach'}</span>
           </h1>
-          <p className="text-sm text-[#a5a0c4] mt-1">
-            Tactical Overview for <span className="font-semibold text-[#ddd6fe]">{team?.name || ''}</span>
+          <p className="text-sm text-secondary mt-1">
+            Tactical Overview for <span className="font-semibold text-primary">{team?.name || ''}</span>
           </p>
         </div>
 
@@ -82,13 +74,12 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Metrics Row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
         <div className="stat-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="stat-card-label">Win Rate</span>
-            <div className="stat-card-icon">
-              <Trophy className="w-4 h-4" />
+            <div className="stat-card-icon flex items-center justify-center">
+              <Trophy className="w-4 h-4 text-accent-strong" />
             </div>
           </div>
           <div>
@@ -103,8 +94,8 @@ export default function Dashboard() {
         <div className="stat-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="stat-card-label">Goals / Match</span>
-            <div className="stat-card-icon">
-              <Target className="w-4 h-4" />
+            <div className="stat-card-icon flex items-center justify-center">
+              <Target className="w-4 h-4 text-accent-strong" />
             </div>
           </div>
           <div>
@@ -116,8 +107,8 @@ export default function Dashboard() {
         <div className="stat-card flex flex-col justify-between">
           <div className="flex items-center justify-between">
             <span className="stat-card-label">Ball Control Index</span>
-            <div className="stat-card-icon">
-              <Activity className="w-4 h-4" />
+            <div className="stat-card-icon flex items-center justify-center">
+              <Activity className="w-4 h-4 text-accent-strong" />
             </div>
           </div>
           <div>
@@ -128,7 +119,7 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="stat-card flex flex-col justify-between border-dashed !border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 cursor-pointer transition-all" onClick={() => navigate('/matches')}>
+        <div className="stat-card !border-dashed !border-purple-500/30 bg-purple-500/5 hover:bg-purple-500/10 cursor-pointer" onClick={() => navigate('/matches')}>
           <div className="flex items-center justify-between">
             <span className="stat-card-label">Quick Match Prep</span>
             <Plus className="w-4 h-4 text-purple-400" />
@@ -140,16 +131,14 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Recent Matches (2 cols) */}
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold text-[#ede9fe] flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-purple-400" /> Recent Fixtures & Results
+            <h2 className="text-lg font-bold text-heading flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-purple-400" /> Recent Fixtures &amp; Results
             </h2>
-              <Link to="/matches" className="text-xs font-semibold text-[#a78bfa] hover:text-[#c4b5fd] transition-colors">
-              View All Registry →
+            <Link to="/matches" className="text-xs font-semibold text-accent-strong hover:text-purple-300 transition-colors">
+              View All Registry &rarr;
             </Link>
           </div>
 
@@ -174,17 +163,17 @@ export default function Dashboard() {
                   </div>
 
                   <div className="flex items-center justify-between py-2">
-                    <div className="font-bold text-[#ede9fe] text-base">{team?.name || ''}</div>
-                    <div className="text-xl font-black text-[#a78bfa] px-3">
+                    <div className="font-bold text-heading text-base">{team?.name || ''}</div>
+                    <div className="text-xl font-black text-accent-strong px-3">
                       {match.status === 'finished' ? `${match.score_team} - ${match.score_opponent}` : 'VS'}
                     </div>
-                    <div className="font-bold text-[#ddd6fe] text-base">{match.opponent_name}</div>
+                    <div className="font-bold text-primary text-base">{match.opponent_name}</div>
                   </div>
 
                   <div className="text-xs text-purple-400/60 flex items-center justify-between border-t border-purple-500/10 pt-3">
                     <span>{match.competition || 'Friendly Match'}</span>
-                    <Link to={`/live-tagging/${match.id}`} className="text-[#a78bfa] hover:underline font-medium">
-                      Analysis →
+                    <Link to={`/live-tagging/${match.id}`} className="text-accent-strong hover:underline font-medium">
+                      Analysis &rarr;
                     </Link>
                   </div>
                 </div>
@@ -193,9 +182,8 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Quick Actions Panel (1 col) */}
         <div className="space-y-4">
-          <h2 className="text-lg font-bold text-[#ede9fe]">Quick Tactical Tools</h2>
+          <h2 className="text-lg font-bold text-heading">Quick Tactical Tools</h2>
 
           <div className="glass-card p-6 space-y-4">
             <Link
@@ -206,8 +194,8 @@ export default function Dashboard() {
                 <Activity className="w-5 h-5 text-purple-400" />
               </div>
               <div>
-                <div className="font-bold text-[#ede9fe] text-sm">Live Match Tagging</div>
-                <div className="text-xs text-[#a5a0c4]">Real-time event recording & telemetry</div>
+                <div className="font-bold text-heading text-sm">Live Match Tagging</div>
+                <div className="text-xs text-secondary">Real-time event recording &amp; telemetry</div>
               </div>
             </Link>
 
@@ -219,8 +207,8 @@ export default function Dashboard() {
                 <Crosshair className="w-5 h-5 text-indigo-400" />
               </div>
               <div>
-                <div className="font-bold text-[#ede9fe] text-sm">Tactical Board</div>
-                <div className="text-xs text-[#a5a0c4]">Interactive canvas & play routine design</div>
+                <div className="font-bold text-heading text-sm">Tactical Board</div>
+                <div className="text-xs text-secondary">Interactive canvas &amp; play routine design</div>
               </div>
             </Link>
 
@@ -232,8 +220,8 @@ export default function Dashboard() {
                 <FileText className="w-5 h-5 text-emerald-400" />
               </div>
               <div>
-                <div className="font-bold text-[#ede9fe] text-sm">Export Match PDF</div>
-                <div className="text-xs text-[#a5a0c4]">Automated post-match executive report</div>
+                <div className="font-bold text-heading text-sm">Export Match PDF</div>
+                <div className="text-xs text-secondary">Automated post-match executive report</div>
               </div>
             </Link>
           </div>

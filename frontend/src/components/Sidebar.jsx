@@ -25,17 +25,11 @@ export default function Sidebar({ isOpen, onClose }) {
     ? (user.name || user.email || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
     : 'U';
 
-  const handleNavClick = () => { onClose?.(); };
-
-  const handleLogout = () => {
-    logout();
-  };
-
   return (
-    <aside className={`sidebar ${isOpen ? 'open' : ''}`}>
+    <aside className={`sidebar flex flex-col ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-brand">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
-          <div className="sidebar-brand-icon">F</div>
+        <div className="flex items-center gap-2.5 mb-0.5">
+          <div className="sidebar-brand-icon flex items-center justify-center">F</div>
           <div>
             <div className="sidebar-brand-name">Futsal Analyst</div>
             <div className="sidebar-brand-sub">Elite Tactical Suite</div>
@@ -45,9 +39,8 @@ export default function Sidebar({ isOpen, onClose }) {
 
       <div className="sidebar-cta">
         <button
-          className="btn-primary"
-          style={{ width: '100%', justifyContent: 'center', fontSize: 13 }}
-          onClick={() => navigate('/matches?newMatch=1')}
+          className="btn-primary w-full justify-center text-[13px]"
+          onClick={() => { navigate('/matches?newMatch=1'); onClose?.(); }}
         >
           <Plus size={15} /> New Match
         </button>
@@ -57,23 +50,23 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="sidebar-nav-label">Navigation</div>
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink
-            key={to} to={to} onClick={handleNavClick}
+            key={to} to={to} onClick={() => onClose?.()}
             className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
           >
-            <Icon size={17} style={{ flexShrink: 0 }} /> <span>{label}</span>
+            <Icon size={17} className="shrink-0" /> <span>{label}</span>
           </NavLink>
         ))}
       </nav>
 
       <div className="sidebar-footer">
-        <div className="nav-user" onClick={handleLogout} style={{ cursor: 'pointer' }}>
-          <div className="nav-user-avatar">{initials}</div>
-          <div style={{ minWidth: 0, flex: 1 }}>
+        <button onClick={logout} className="nav-user w-full cursor-pointer border-none bg-accent-bg">
+          <div className="nav-user-avatar flex items-center justify-center">{initials}</div>
+          <div className="min-w-0 flex-1 text-left">
             <div className="nav-user-name">{user?.name || user?.email || 'Analyst'}</div>
             <div className="nav-user-role">Head Analyst</div>
           </div>
-          <LogOut size={15} style={{ color: 'var(--text-muted)', flexShrink: 0 }} />
-        </div>
+          <LogOut size={15} className="text-muted shrink-0" />
+        </button>
       </div>
     </aside>
   );

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import api from '../api';
 import { Plus, Trash2 } from 'lucide-react';
 
@@ -19,11 +19,7 @@ export default function Players() {
       if (!teamId) return;
       const res = await api.get(`/teams/${teamId}/players`);
       setPlayers(res.data.data || []);
-    } catch (err) {
-      console.error('Failed to fetch players:', err);
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const handleSubmit = async (e) => {
@@ -32,19 +28,13 @@ export default function Players() {
       const meRes = await api.get('/me');
       const teamId = meRes.data.data.team_id || meRes.data.data.owned_teams?.[0]?.id;
       if (!teamId) return;
-
-      if (editing) {
-        await api.put(`/players/${editing.id}`, formData);
-      } else {
-        await api.post(`/teams/${teamId}/players`, formData);
-      }
+      if (editing) await api.put(`/players/${editing.id}`, formData);
+      else await api.post(`/teams/${teamId}/players`, formData);
       setShowModal(false);
       setEditing(null);
       setFormData({ name: '', jersey_number: '', position: '' });
       fetchPlayers();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menyimpan pemain.');
-    }
+    } catch (err) { alert(err.response?.data?.message || 'Gagal menyimpan pemain.'); }
   };
 
   const handleEdit = (player) => {
@@ -55,20 +45,16 @@ export default function Players() {
 
   const handleDelete = async (id) => {
     if (!confirm('Yakin hapus pemain ini?')) return;
-    try {
-      await api.delete(`/players/${id}`);
-      setPlayers(players.filter(p => p.id !== id));
-    } catch (err) {
-      alert(err.response?.data?.message || 'Gagal menghapus pemain.');
-    }
+    try { await api.delete(`/players/${id}`); setPlayers(players.filter(p => p.id !== id)); }
+    catch (err) { alert(err.response?.data?.message || 'Gagal menghapus pemain.'); }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Team Roster</h1>
-          <p className="text-sm text-purple-300/70 mt-1">Manage player profiles, jersey numbers & positions</p>
+          <h1 className="text-2xl font-bold text-heading tracking-tight">Team Roster</h1>
+          <p className="text-sm text-secondary mt-1">Manage player profiles, jersey numbers &amp; positions</p>
         </div>
         <button onClick={() => { setEditing(null); setFormData({ name: '', jersey_number: '', position: '' }); setShowModal(true); }} className="btn-primary">
           <Plus className="w-4 h-4" /> Add Player
@@ -76,14 +62,12 @@ export default function Players() {
       </div>
 
       {loading ? (
-        <div className="glass-card p-12 text-center text-purple-400/60">
+        <div className="glass-card p-12 text-center text-muted">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent mx-auto mb-4" />
           Loading roster...
         </div>
       ) : players.length === 0 ? (
-        <div className="glass-card p-12 text-center text-purple-300/60">
-          No players registered yet. Add your first player!
-        </div>
+        <div className="glass-card p-12 text-center text-muted">No players registered yet. Add your first player!</div>
       ) : (
         <div className="glass-card overflow-hidden">
           <table>
@@ -92,14 +76,14 @@ export default function Players() {
                 <th>#</th>
                 <th>Player Name</th>
                 <th>Position</th>
-                <th style={{ width: 100 }}>Actions</th>
+                <th className="w-24">Actions</th>
               </tr>
             </thead>
             <tbody>
               {players.map(p => (
                 <tr key={p.id}>
                   <td className="font-mono font-bold text-purple-400">#{p.jersey_number}</td>
-                  <td className="font-bold text-white">{p.name}</td>
+                  <td className="font-bold text-heading">{p.name}</td>
                   <td className="text-purple-300">{p.position || '-'}</td>
                   <td>
                     <div className="flex items-center gap-2">
@@ -119,7 +103,7 @@ export default function Players() {
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
           <div className="modal-box" onClick={e => e.stopPropagation()}>
-            <h2 className="text-xl font-bold text-white mb-4">{editing ? 'Edit Player' : 'Add New Player'}</h2>
+            <h2 className="text-xl font-bold text-heading mb-4">{editing ? 'Edit Player' : 'Add New Player'}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label>Player Name</label>
