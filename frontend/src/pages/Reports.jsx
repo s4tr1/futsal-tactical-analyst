@@ -44,7 +44,7 @@ export default function Reports() {
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `Sipijar-Match-Report-#${idToUse}.pdf`);
+      link.setAttribute('download', `Futsight-Match-Report-#${idToUse}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();

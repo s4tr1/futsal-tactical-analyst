@@ -8,6 +8,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\StatisticsController;
 use App\Http\Controllers\TacticController;
 use App\Http\Controllers\TeamController;
+use App\Http\Controllers\HighlightController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\VideoController;
 use Illuminate\Support\Facades\Route;
@@ -65,4 +66,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('matches/{matchId}/tracking/ball', [TrackingController::class, 'ball']);
     Route::get('matches/{matchId}/tracking/heatmap', [TrackingController::class, 'heatmap']);
     Route::get('matches/{matchId}/tracking/summary', [TrackingController::class, 'summary']);
+    Route::get('matches/{matchId}/tracking/playback', [TrackingController::class, 'playback']);
+    Route::post('matches/{matchId}/tracking/snapshot-to-tactic', [TrackingController::class, 'snapshotToTactic']);
+
+    // Highlights
+    Route::get('matches/{matchId}/highlights', [HighlightController::class, 'index']);
+    Route::post('matches/{matchId}/highlights/generate', [HighlightController::class, 'generate']);
+    Route::get('highlights/{id}/download', [HighlightController::class, 'download']);
 });

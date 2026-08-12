@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, Circle, CloudUpload, Video,
-  BarChart2, Crosshair, FileText, Users, Plus, LogOut
+  BarChart2, Crosshair, FileText, Users, Plus, LogOut, Clapperboard
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,6 +13,7 @@ const navItems = [
   { to: '/statistics',    icon: BarChart2,       label: 'Statistics'      },
   { to: '/tactical-board',icon: Crosshair,       label: 'Tactical Board'  },
   { to: '/reports',       icon: FileText,        label: 'Reports'         },
+  { to: '/highlights',   icon: Clapperboard,    label: 'Highlights'      },
   { to: '/players',       icon: Users,           label: 'Players'         },
 ];
 

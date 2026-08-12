@@ -84,15 +84,16 @@ export default function VideoUpload() {
       const formData = new FormData();
       formData.append('video', selectedFile);
 
-      const interval = setInterval(() => {
-        setProgress((prev) => (prev >= 90 ? 90 : prev + 15));
-      }, 300);
-
-      await api.post(`/matches/${matchId}/video`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      await api.post(`http://127.0.0.1:8000/api/matches/${matchId}/video`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 600000,
+        onUploadProgress: (e) => {
+          if (e.total) {
+            setProgress(Math.round((e.loaded / e.total) * 100));
+          }
+        },
       });
 
-      clearInterval(interval);
       setProgress(100);
       setSuccessMsg(`Video "${selectedFile.name}" berhasil diunggah!`);
       setSelectedFile(null);

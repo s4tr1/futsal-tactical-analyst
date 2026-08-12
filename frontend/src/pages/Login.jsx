@@ -39,7 +39,7 @@ export default function Login() {
             <Shield className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-2xl font-black text-[#ede9fe] tracking-tight leading-tight">
-            SIPIJAR
+            FUTSIGHT
           </h1>
           <p className="text-xs text-[#5b5575] font-semibold tracking-widest uppercase mt-1.5">
             Futsal Tactical Analyst

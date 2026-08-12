@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\TriggerAiTracking;
 use App\Models\BallTrack;
 use App\Models\Matches;
 use App\Models\PlayerTrack;
+use App\Models\Tactic;
 use App\Models\Team;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TrackingController extends Controller
 {
@@ -26,10 +29,24 @@ class TrackingController extends Controller
             return response()->json(['success' => false, 'message' => 'Upload video terlebih dahulu.'], 400);
         }
 
+        if (in_array($video->tracking_status, ['queued', 'processing'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Tracking sedang berjalan. Tunggu hingga selesai.',
+                'data' => ['status' => $video->tracking_status],
+            ], 409);
+        }
+
         $video->update([
             'tracking_status' => 'queued',
             'tracking_started_at' => now(),
+            'tracking_error' => null,
         ]);
+
+        TriggerAiTracking::dispatch(
+            $matchId,
+            Storage::disk('public')->path($video->file_path),
+        );
 
         return response()->json([
             'success' => true,
@@ -213,5 +230,165 @@ class TrackingController extends Controller
                 'total_ball_datapoints' => $ballTracks->count(),
             ],
         ]);
+    }
+
+    public function playback(Request $request, $matchId)
+    {
+        $this->authorizeCoach($request, $matchId);
+        $video = Matches::findOrFail($matchId)->video;
+
+        $performStep = (int) $request->get('step', 1);
+        $maxFrames = (int) $request->get('max_frames', 0);
+
+        $players = PlayerTrack::where('match_id', $matchId)
+            ->orderBy('frame_number')
+            ->get();
+
+        $balls = BallTrack::where('match_id', $matchId)
+            ->orderBy('frame_number')
+            ->get();
+
+        $playersByFrame = [];
+        foreach ($players as $p) {
+            $fn = (int) floor($p->frame_number / $performStep) * $performStep;
+            if (!isset($playersByFrame[$fn])) $playersByFrame[$fn] = [];
+            $playersByFrame[$fn][] = $p;
+        }
+
+        $ballsByFrame = [];
+        foreach ($balls as $b) {
+            $fn = (int) floor($b->frame_number / $performStep) * $performStep;
+            if (!isset($ballsByFrame[$fn])) $ballsByFrame[$fn] = [];
+            $ballsByFrame[$fn][] = $b;
+        }
+
+        $frameNumbers = array_keys($playersByFrame);
+        sort($frameNumbers);
+        if ($maxFrames > 0) $frameNumbers = array_slice($frameNumbers, 0, $maxFrames);
+
+        $frames = [];
+        foreach ($frameNumbers as $fn) {
+            $framePlayers = $playersByFrame[$fn] ?? [];
+            $frameBall = $ballsByFrame[$fn] ?? [];
+
+            $frames[] = [
+                'frame_number' => (int) $fn,
+                'players' => array_values(array_map(fn($p) => [
+                    'tracking_id' => $p->tracking_id,
+                    'x' => round($p->x, 4),
+                    'y' => round($p->y, 4),
+                    'team' => $p->team,
+                ], $framePlayers)),
+                'ball' => !empty($frameBall) ? [
+                    'x' => round($frameBall[0]->x, 4),
+                    'y' => round($frameBall[0]->y, 4),
+                ] : null,
+            ];
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'fps' => $video?->fps_source ?? 30,
+                'sample_rate' => (int) config('ai-worker.FRAME_SAMPLE_RATE', 5),
+                'frame_count' => count($frames),
+                'frames' => $frames,
+            ],
+        ]);
+    }
+
+    public function snapshotToTactic(Request $request, $matchId)
+    {
+        $this->authorizeCoach($request, $matchId);
+
+        $validated = $request->validate([
+            'frame_number' => 'required|integer|min:0',
+            'name' => 'required|string|max:100',
+        ]);
+
+        $frameNumber = $validated['frame_number'];
+        $name = $validated['name'];
+
+        $players = PlayerTrack::where('match_id', $matchId)
+            ->where('frame_number', $frameNumber)
+            ->get();
+
+        $ball = BallTrack::where('match_id', $matchId)
+            ->where('frame_number', $frameNumber)
+            ->first();
+
+        if ($players->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No tracking data at this frame.'], 404);
+        }
+
+        $homePlayers = $players->where('team', 'home');
+        $awayPlayers = $players->where('team', 'away');
+        $unknownPlayers = $players->where('team', 'unknown');
+
+        $homeTokens = $homePlayers->values()->map(fn($p, $i) => [
+            'id' => 't_h_' . $p->tracking_id,
+            'number' => $i + 1,
+            'x' => round($p->x * 800, 1),
+            'y' => round($p->y * 520, 1),
+        ])->toArray();
+
+        if ($homeTokens === []) {
+            $homeTokens = $unknownPlayers->take(5)->values()->map(fn($p, $i) => [
+                'id' => 't_h_' . $p->tracking_id,
+                'number' => $i + 1,
+                'x' => round($p->x * 800, 1),
+                'y' => round($p->y * 520, 1),
+            ])->toArray();
+
+            $awayTokens = $players->whereNotIn('tracking_id', $unknownPlayers->take(5)->pluck('tracking_id'))
+                ->values()->map(fn($p, $i) => [
+                    'id' => 't_a_' . $p->tracking_id,
+                    'number' => $i + 1,
+                    'x' => round($p->x * 800, 1),
+                    'y' => round($p->y * 520, 1),
+                ])->toArray();
+        } else {
+            $awayTokens = $awayPlayers->values()->map(fn($p, $i) => [
+                'id' => 't_a_' . $p->tracking_id,
+                'number' => $i + 1,
+                'x' => round($p->x * 800, 1),
+                'y' => round($p->y * 520, 1),
+            ])->toArray();
+
+            if ($awayTokens === []) {
+                $awayTokens = $players->whereNotIn('tracking_id', $homePlayers->pluck('tracking_id'))
+                    ->values()->map(fn($p, $i) => [
+                        'id' => 't_a_' . $p->tracking_id,
+                        'number' => $i + 1,
+                        'x' => round($p->x * 800, 1),
+                        'y' => round($p->y * 520, 1),
+                    ])->toArray();
+            }
+        }
+
+        $canvasJson = [
+            'teamA' => $homeTokens,
+            'teamB' => $awayTokens,
+            'arrows' => [],
+            'zones' => [],
+            'texts' => [],
+            'ball' => $ball ? [
+                'x' => round($ball->x * 800, 1),
+                'y' => round($ball->y * 520, 1),
+            ] : null,
+        ];
+
+        $tactic = Tactic::create([
+            'match_id' => $matchId,
+            'name' => $name,
+            'canvas_json' => $canvasJson,
+            'created_by' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => $tactic,
+            'message' => 'Tactic saved from tracking snapshot.',
+        ], 201);
     }
 }

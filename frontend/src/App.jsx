@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Sidebar from './components/Sidebar';
 import Topbar from './components/Topbar';
@@ -12,8 +12,9 @@ import VideoUpload from './pages/VideoUpload';
 import Statistics from './pages/Statistics';
 import Reports from './pages/Reports';
 import Players from './pages/Players';
+import Highlights from './pages/Highlights';
 
-function ProtectedLayout({ children }) {
+function ProtectedLayout() {
   const { user, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -34,7 +35,7 @@ function ProtectedLayout({ children }) {
       {sidebarOpen && <div className="fixed inset-0 bg-black/60 z-40 md:hidden" onClick={() => setSidebarOpen(false)} />}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <Topbar onMenuToggle={() => setSidebarOpen(v => !v)} />
-      <div className="page-content">{children}</div>
+      <div className="page-content"><Outlet /></div>
     </div>
   );
 }
@@ -53,16 +54,19 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
-      <Route path="/dashboard" element={<ProtectedLayout><Dashboard /></ProtectedLayout>} />
-      <Route path="/matches" element={<ProtectedLayout><Matches /></ProtectedLayout>} />
-      <Route path="/live-tagging" element={<ProtectedLayout><LiveTagging /></ProtectedLayout>} />
-      <Route path="/live-tagging/:matchId" element={<ProtectedLayout><LiveTagging /></ProtectedLayout>} />
-      <Route path="/tactical-board" element={<ProtectedLayout><TacticalBoard /></ProtectedLayout>} />
-      <Route path="/video-upload" element={<ProtectedLayout><VideoUpload /></ProtectedLayout>} />
-      <Route path="/statistics" element={<ProtectedLayout><Statistics /></ProtectedLayout>} />
-      <Route path="/reports" element={<ProtectedLayout><Reports /></ProtectedLayout>} />
-      <Route path="/players" element={<ProtectedLayout><Players /></ProtectedLayout>} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route element={<ProtectedLayout />}>
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/matches" element={<Matches />} />
+        <Route path="/live-tagging" element={<LiveTagging />} />
+        <Route path="/live-tagging/:matchId" element={<LiveTagging />} />
+        <Route path="/tactical-board" element={<TacticalBoard />} />
+        <Route path="/video-upload" element={<VideoUpload />} />
+        <Route path="/statistics" element={<Statistics />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/players" element={<Players />} />
+        <Route path="/highlights" element={<Highlights />} />
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Route>
     </Routes>
   );
 }

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react';
+import { useParams } from 'react-router-dom';
 import api from '../api';
 import { Play, Pause, RotateCcw, Target, AlertTriangle, ShieldAlert, Flag, Clock, Trash2, Video, ScanEye, Loader2, CheckCircle2, XCircle, BarChart3, Activity, Timer } from 'lucide-react';
 
@@ -159,7 +159,16 @@ export default function LiveTagging() {
 
   useEffect(() => { if (matchId) fetchTrackingStatus(); }, [matchId]);
 
+  useEffect(() => {
+    if (!matchId || !trackingStatus) return;
+    if (trackingStatus.status === 'processing' || trackingStatus.status === 'queued' || trackingStatus.status === 'tagging') {
+      const interval = setInterval(fetchTrackingStatus, 3000);
+      return () => clearInterval(interval);
+    }
+  }, [matchId, trackingStatus?.status]);
+
   const formatTime = (totalSec) => {
+    const m = Math.floor(totalSec / 60);
     const s = totalSec % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
@@ -337,6 +346,11 @@ export default function LiveTagging() {
                       <Loader2 className="w-3.5 h-3.5 animate-spin" /> Processing
                     </span>
                   )}
+                  {trackingStatus.status === 'tagging' && (
+                    <span className="flex items-center gap-1 text-xs font-bold text-purple-400">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" /> Tagging Events
+                    </span>
+                  )}
                   {trackingStatus.status === 'queued' && (
                     <span className="flex items-center gap-1 text-xs font-bold text-amber-400">
                       <Timer className="w-3.5 h-3.5" /> Queued
@@ -416,17 +430,17 @@ export default function LiveTagging() {
 
             <button
               onClick={handleQueueTracking}
-              disabled={trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued'}
+              disabled={trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued' || trackingStatus?.status === 'tagging'}
               className={`w-full py-2.5 rounded-lg text-xs font-bold uppercase tracking-wide transition-all flex items-center justify-center gap-2 ${
-                trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued'
+                trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued' || trackingStatus?.status === 'tagging'
                   ? 'bg-purple-900/30 text-purple-400/50 cursor-not-allowed'
                   : 'bg-gradient-to-r from-cyan-600 to-purple-600 text-white hover:from-cyan-500 hover:to-purple-500 shadow-lg shadow-purple-500/20'
               }`}
             >
-              {trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued' ? (
+              {trackingLoading || trackingStatus?.status === 'processing' || trackingStatus?.status === 'queued' || trackingStatus?.status === 'tagging' ? (
                 <>
                   <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  {trackingStatus?.status === 'processing' ? 'Processing...' : 'Queued...'}
+                  {trackingStatus?.status === 'processing' ? 'Processing...' : trackingStatus?.status === 'tagging' ? 'Tagging...' : 'Queued...'}
                 </>
               ) : (
                 <>
