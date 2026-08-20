@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -5,12 +7,26 @@ import cv2
 import os
 import traceback
 
-from config import MODEL_PATH, STORAGE_BASE, FRAME_SAMPLE_RATE, AI_WORKER_PORT, AI_WORKER_HOST
+from config import (
+    MODEL_PATH,
+    STORAGE_BASE,
+    FRAME_SAMPLE_RATE,
+    AI_WORKER_PORT,
+    AI_WORKER_HOST,
+    ENABLE_TEAM_CLASSIFICATION,
+    ENABLE_CAMERA_COMPENSATION,
+    ENABLE_HOMOGRAPHY,
+    HOMOGRAPHY_SRC_POINTS,
+    HOMOGRAPHY_DST_POINTS,
+)
 from detector import Detector
 from tracker import PlayerTracker
 from db import DB
 from auto_tagger import detect_events
 from clipper import generate_highlights
+from team_classifier import classify_teams, extract_jersey_hue
+from camera_compensation import CameraCompensator
+from homography import HomographyTransformer
 
 app = FastAPI(title="Futsal AI Worker")
 
@@ -84,6 +100,12 @@ def process_video(req: ProcessRequest):
         player_batch = []
         ball_batch = []
 
+        compensator = CameraCompensator() if ENABLE_CAMERA_COMPENSATION else None
+        homography = HomographyTransformer(HOMOGRAPHY_SRC_POINTS, HOMOGRAPHY_DST_POINTS) if ENABLE_HOMOGRAPHY else None
+        hue_by_track = defaultdict(list)
+        x_sum_by_track = defaultdict(float)
+        x_count_by_track = defaultdict(int)
+
         cap = cv2.VideoCapture(video_path)
 
         while cap.isOpened():
@@ -91,25 +113,58 @@ def process_video(req: ProcessRequest):
             if not ret:
                 break
 
+            if compensator is not None:
+                gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+                compensator.update(gray)
+
             if frame_number % FRAME_SAMPLE_RATE == 0:
                 detections = detector.detect(frame)
 
                 tracked = tracker.update(detections, frame_number)
+
+                h, w = frame.shape[:2]
+
                 for t in tracked:
+                    cx, cy = t["center_x"], t["center_y"]
+
+                    if compensator is not None:
+                        cx, cy = compensator.correct(cx, cy, w, h)
+
+                    x_map = y_map = None
+                    if homography is not None:
+                        x_map, y_map = homography.transform_point(cx, cy)
+
+                    if ENABLE_TEAM_CLASSIFICATION:
+                        tid = t["tracking_id"]
+                        hue_by_track[tid].append(extract_jersey_hue(frame, t["bbox"]))
+                        x_sum_by_track[tid] += cx
+                        x_count_by_track[tid] += 1
+
                     player_batch.append((
                         match_id, frame_number,
                         t["tracking_id"],
-                        t["center_x"], t["center_y"],
+                        cx, cy,
                         t["confidence"],
                         "unknown",
+                        x_map, y_map,
                     ))
 
                 balls = [d for d in detections if d["class"] == "ball"]
                 for b in balls:
+                    bx, by = b["center_x"], b["center_y"]
+
+                    if compensator is not None:
+                        bx, by = compensator.correct(bx, by, w, h)
+
+                    bx_map = by_map = None
+                    if homography is not None:
+                        bx_map, by_map = homography.transform_point(bx, by)
+
                     ball_batch.append((
                         match_id, frame_number,
-                        b["center_x"], b["center_y"],
+                        bx, by,
                         b["confidence"],
+                        bx_map, by_map,
                     ))
 
                 processed += 1
@@ -146,6 +201,12 @@ def process_video(req: ProcessRequest):
 
         print(f"[WORKER] Tracking done. match_id={match_id}, frames={frame_number}, sampled={processed}")
 
+        silhouette = None
+        if ENABLE_TEAM_CLASSIFICATION:
+            silhouette = _run_team_classification(
+                match_id, hue_by_track, x_sum_by_track, x_count_by_track
+            )
+
         _run_auto_tagging(match_id, fps, FRAME_SAMPLE_RATE)
         _run_highlight_generation(match_id, video_path)
 
@@ -154,12 +215,38 @@ def process_video(req: ProcessRequest):
             "frames_processed": frame_number,
             "frames_tracked": processed,
             "fps_source": round(fps, 2),
+            "team_classification": {
+                "enabled": ENABLE_TEAM_CLASSIFICATION,
+                "silhouette_score": silhouette,
+            },
         }
 
     except Exception as e:
         db.update_video_status(match_id, "failed", error=str(e))
         traceback.print_exc()
         raise HTTPException(500, str(e))
+
+
+def _run_team_classification(match_id, hue_by_track, x_sum_by_track, x_count_by_track):
+    try:
+        print(f"[WORKER] Running team classification for match {match_id}...")
+
+        x_mean_by_track = {
+            tid: x_sum_by_track[tid] / x_count_by_track[tid]
+            for tid in x_sum_by_track
+            if x_count_by_track[tid] > 0
+        }
+
+        result = classify_teams(dict(hue_by_track), x_mean_by_track)
+        db.update_player_team_batch(match_id, result["teams"])
+
+        print(f"[WORKER] Team classification done. silhouette={result['silhouette']}")
+        print(f"[WORKER] Teams: {result['teams']}")
+        return result["silhouette"]
+    except Exception as e:
+        print(f"[WORKER] Team classification error: {e}")
+        traceback.print_exc()
+        return None
 
 
 def _run_auto_tagging(match_id, fps, frame_sample):

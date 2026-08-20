@@ -1,11 +1,19 @@
 import numpy as np
 
 
+def _coord(track, key):
+    """Prefer homography-mapped coordinates, fallback to raw coordinates."""
+    mapped = track.get(key + "_map")
+    if mapped is not None:
+        return mapped
+    return track[key]
+
+
 def generate_heatmap(player_tracks, grid_cols=20, grid_rows=10):
     grid = np.zeros((grid_rows, grid_cols))
     for track in player_tracks:
-        col = int(track["x"] * grid_cols)
-        row = int(track["y"] * grid_rows)
+        col = int(_coord(track, "x") * grid_cols)
+        row = int(_coord(track, "y") * grid_rows)
         if 0 <= col < grid_cols and 0 <= row < grid_rows:
             grid[row][col] += 1
     max_val = grid.max()
@@ -66,8 +74,8 @@ def calculate_distance(player_tracks):
         team = positions[0].get("team", "unknown")
         for i in range(1, len(positions)):
             dist = np.sqrt(
-                (positions[i]["x"] - positions[i - 1]["x"]) ** 2
-                + (positions[i]["y"] - positions[i - 1]["y"]) ** 2
+                (_coord(positions[i], "x") - _coord(positions[i - 1], "x")) ** 2
+                + (_coord(positions[i], "y") - _coord(positions[i - 1], "y")) ** 2
             )
             dist_meters = dist * 40
             result[team] += dist_meters
@@ -83,7 +91,7 @@ def _find_nearest_player_team(ball, players):
     nearest_team = "unknown"
     for player in players:
         dist = np.sqrt(
-            (player["x"] - ball["x"]) ** 2 + (player["y"] - ball["y"]) ** 2
+            (_coord(player, "x") - _coord(ball, "x")) ** 2 + (_coord(player, "y") - _coord(ball, "y")) ** 2
         )
         if dist < min_dist:
             min_dist = dist

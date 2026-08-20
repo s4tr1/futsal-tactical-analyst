@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api';
 import { Link, useSearchParams } from 'react-router-dom';
-import { Plus, Calendar, MapPin, Trophy, Play } from 'lucide-react';
+import { Plus, Calendar, MapPin, Trophy, Play, Trash2 } from 'lucide-react';
 
 export default function Matches() {
   const [searchParams] = useSearchParams();
@@ -9,6 +9,10 @@ export default function Matches() {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState('all');
+  const [noTeam, setNoTeam] = useState(false);
+  const [matchToDelete, setMatchToDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const [formData, setFormData] = useState({
     opponent_name: '',
@@ -28,7 +32,7 @@ export default function Matches() {
       setLoading(true);
       const meRes = await api.get('/me');
       const teamId = meRes.data.data.team_id || meRes.data.data.owned_teams?.[0]?.id;
-      if (!teamId) return;
+      if (!teamId) { setNoTeam(true); return; }
       const res = await api.get(`/teams/${teamId}/matches`);
       setMatches(res.data.data || []);
     } finally {
@@ -41,13 +45,36 @@ export default function Matches() {
     try {
       const meRes = await api.get('/me');
       const teamId = meRes.data.data.team_id || meRes.data.data.owned_teams?.[0]?.id;
-      if (!teamId) return;
+      if (!teamId) {
+        alert('Belum ada tim. Buat tim terlebih dahulu sebelum menjadwalkan pertandingan.');
+        return;
+      }
       await api.post(`/teams/${teamId}/matches`, formData);
       setShowModal(false);
       fetchMatches();
       setFormData({ opponent_name: '', match_date: new Date().toISOString().split('T')[0], location: 'GOR Serbaguna', competition: 'National League', status: 'scheduled' });
     } catch (err) {
       alert(err.response?.data?.message || 'Gagal menambahkan pertandingan.');
+    }
+  };
+
+  const handleDeleteMatch = (id) => {
+    setDeleteError('');
+    setMatchToDelete(id);
+  };
+
+  const confirmDeleteMatch = async () => {
+    if (!matchToDelete) return;
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await api.delete(`/matches/${matchToDelete}`);
+      setMatchToDelete(null);
+      fetchMatches();
+    } catch (err) {
+      setDeleteError(err.response?.data?.message || 'Gagal menghapus pertandingan.');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -84,6 +111,10 @@ export default function Matches() {
         <div className="glass-card p-12 text-center text-muted">
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-purple-500 border-t-transparent mx-auto mb-4" />
           Loading match database...
+        </div>
+      ) : noTeam ? (
+        <div className="glass-card p-12 text-center text-muted">
+          Belum ada tim. Buat tim terlebih dahulu sebelum menjadwalkan pertandingan.
         </div>
       ) : filteredMatches.length === 0 ? (
         <div className="glass-card p-12 text-center text-muted">
@@ -127,6 +158,9 @@ export default function Matches() {
                   <Play className="w-3.5 h-3.5" /> Tag Match
                 </Link>
                 <Link to={`/statistics?matchId=${match.id}`} className="btn-secondary text-xs py-2">Stats</Link>
+                <button onClick={() => handleDeleteMatch(match.id)} title="Hapus pertandingan" className="p-2 rounded-lg text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors">
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             </div>
           ))}
@@ -159,6 +193,27 @@ export default function Matches() {
                 <button type="submit" className="btn-primary">Save Fixture</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+      {matchToDelete !== null && (
+        <div className="modal-overlay" onClick={() => !deleting && setMatchToDelete(null)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-heading mb-4">Hapus Pertandingan</h2>
+            <p className="text-sm text-secondary mb-4">
+              Yakin ingin menghapus pertandingan ini? Data event, video, dan taktik terkait akan ikut terhapus.
+            </p>
+            {deleteError && (
+              <div className="mb-4 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-medium">
+                {deleteError}
+              </div>
+            )}
+            <div className="flex justify-end gap-3 pt-4 border-t border-purple-500/20">
+              <button type="button" onClick={() => setMatchToDelete(null)} className="btn-secondary" disabled={deleting}>Batal</button>
+              <button type="button" onClick={confirmDeleteMatch} disabled={deleting} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold text-[13px] transition-all disabled:opacity-40 disabled:cursor-not-allowed">
+                {deleting ? 'Menghapus...' : 'Hapus'}
+              </button>
+            </div>
           </div>
         </div>
       )}

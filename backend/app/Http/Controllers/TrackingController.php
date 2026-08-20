@@ -6,6 +6,7 @@ use App\Jobs\TriggerAiTracking;
 use App\Models\BallTrack;
 use App\Models\Matches;
 use App\Models\PlayerTrack;
+use App\Services\TrackingAnalytics;
 use App\Models\Tactic;
 use App\Models\Team;
 use Illuminate\Http\Request;
@@ -13,6 +14,12 @@ use Illuminate\Support\Facades\Storage;
 
 class TrackingController extends Controller
 {
+    private function coord($track, string $key): float
+    {
+        $mapped = $track->{$key . '_map'};
+        return $mapped !== null ? (float) $mapped : (float) $track->{$key};
+    }
+
     private function authorizeCoach(Request $request, $matchId): Matches
     {
         $match = Matches::findOrFail($matchId);
@@ -135,8 +142,8 @@ class TrackingController extends Controller
         $maxVal = 0;
 
         foreach ($tracks as $track) {
-            $col = (int) floor($track->x * $gridCols);
-            $row = (int) floor($track->y * $gridRows);
+            $col = (int) floor($this->coord($track, 'x') * $gridCols);
+            $row = (int) floor($this->coord($track, 'y') * $gridRows);
             if ($col >= 0 && $col < $gridCols && $row >= 0 && $row < $gridRows) {
                 $grid[$row][$col]++;
                 if ($grid[$row][$col] > $maxVal) {
@@ -184,7 +191,7 @@ class TrackingController extends Controller
             $nearestTeam = 'unknown';
             $minDist = PHP_FLOAT_MAX;
             foreach ($playersInFrame as $player) {
-                $dist = sqrt(pow($player->x - $ball->x, 2) + pow($player->y - $ball->y, 2));
+                $dist = sqrt(pow($this->coord($player, 'x') - $this->coord($ball, 'x'), 2) + pow($this->coord($player, 'y') - $this->coord($ball, 'y'), 2));
                 if ($dist < $minDist) {
                     $minDist = $dist;
                     $nearestTeam = $player->team;
@@ -207,8 +214,8 @@ class TrackingController extends Controller
             $team = $positions->first()->team;
             for ($i = 1; $i < count($positions); $i++) {
                 $dist = sqrt(
-                    pow($positions[$i]->x - $positions[$i - 1]->x, 2) +
-                    pow($positions[$i]->y - $positions[$i - 1]->y, 2)
+                    pow($this->coord($positions[$i], 'x') - $this->coord($positions[$i - 1], 'x'), 2) +
+                    pow($this->coord($positions[$i], 'y') - $this->coord($positions[$i - 1], 'y'), 2)
                 );
                 $distMeters = $dist * 40;
                 if ($team === 'home') $homeDistance += $distMeters;
@@ -248,6 +255,23 @@ class TrackingController extends Controller
             ->orderBy('frame_number')
             ->get();
 
+        $analytics = new TrackingAnalytics();
+        $playerArray = $players->map(fn ($p) => [
+            'tracking_id' => $p->tracking_id,
+            'team' => $p->team,
+            'frame_number' => $p->frame_number,
+            'x' => $p->x,
+            'y' => $p->y,
+            'x_map' => $p->x_map,
+            'y_map' => $p->y_map,
+        ])->all();
+        $roles = $analytics->inferRoles($playerArray);
+        $predictions = $analytics->predictPositions(
+            $playerArray,
+            (int) config('ai-worker.predict.lookback', 3),
+            (int) config('ai-worker.predict.horizon', 2),
+        );
+
         $playersByFrame = [];
         foreach ($players as $p) {
             $fn = (int) floor($p->frame_number / $performStep) * $performStep;
@@ -277,11 +301,17 @@ class TrackingController extends Controller
                     'tracking_id' => $p->tracking_id,
                     'x' => round($p->x, 4),
                     'y' => round($p->y, 4),
+                    'x_map' => $p->x_map !== null ? round($p->x_map, 4) : null,
+                    'y_map' => $p->y_map !== null ? round($p->y_map, 4) : null,
                     'team' => $p->team,
+                    'role' => $roles[$p->tracking_id] ?? 'unknown',
+                    'predicted' => $predictions[$p->tracking_id][$p->frame_number] ?? null,
                 ], $framePlayers)),
                 'ball' => !empty($frameBall) ? [
                     'x' => round($frameBall[0]->x, 4),
                     'y' => round($frameBall[0]->y, 4),
+                    'x_map' => $frameBall[0]->x_map !== null ? round($frameBall[0]->x_map, 4) : null,
+                    'y_map' => $frameBall[0]->y_map !== null ? round($frameBall[0]->y_map, 4) : null,
                 ] : null,
             ];
         }

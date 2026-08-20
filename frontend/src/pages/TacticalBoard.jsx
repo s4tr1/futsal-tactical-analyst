@@ -39,6 +39,8 @@ export default function TacticalBoard() {
   const [playbackIndex, setPlaybackIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [playSpeed, setPlaySpeed] = useState(1);
+  const [showPrediction, setShowPrediction] = useState(true);
+  const [showLabels, setShowLabels] = useState(true);
   const [snapshotMsg, setSnapshotMsg] = useState('');
 
   const pitchRef = useRef(null);
@@ -113,7 +115,14 @@ export default function TacticalBoard() {
     const homeTokens = [];
     const awayTokens = [];
     frame.players.forEach((p) => {
-      const token = { id: `pb_${p.tracking_id}`, number: p.tracking_id, x: p.x * PITCH_W, y: p.y * PITCH_H };
+      const token = {
+        id: `pb_${p.tracking_id}`,
+        number: p.tracking_id,
+        x: (p.x_map ?? p.x) * PITCH_W,
+        y: (p.y_map ?? p.y) * PITCH_H,
+        role: p.role || 'unknown',
+        predicted: p.predicted ? { x: p.predicted.x * PITCH_W, y: p.predicted.y * PITCH_H } : null,
+      };
       if (p.team === 'home') homeTokens.push(token);
       else awayTokens.push(token);
     });
@@ -127,7 +136,7 @@ export default function TacticalBoard() {
       setTeamBTokens(awayTokens);
     }
 
-    setBallPos(frame.ball ? { x: frame.ball.x * PITCH_W, y: frame.ball.y * PITCH_H } : null);
+    setBallPos(frame.ball ? { x: (frame.ball.x_map ?? frame.ball.x) * PITCH_W, y: (frame.ball.y_map ?? frame.ball.y) * PITCH_H } : null);
     setPlaybackIndex(index);
     playbackIndexRef.current = index;
   }, [playbackData]);
@@ -335,6 +344,17 @@ export default function TacticalBoard() {
                 </button>
               ))}
             </div>
+
+            <div className="flex items-center gap-2">
+              <button onClick={() => setShowPrediction(p => !p)}
+                className={`text-[10px] px-2 py-1 rounded font-bold transition-all ${showPrediction ? 'bg-amber-500 text-heading' : 'bg-purple-900/30 text-purple-400 hover:bg-purple-800/40'}`}>
+                Prediction {showPrediction ? 'ON' : 'OFF'}
+              </button>
+              <button onClick={() => setShowLabels(p => !p)}
+                className={`text-[10px] px-2 py-1 rounded font-bold transition-all ${showLabels ? 'bg-cyan-500 text-heading' : 'bg-purple-900/30 text-purple-400 hover:bg-purple-800/40'}`}>
+                Labels {showLabels ? 'ON' : 'OFF'}
+              </button>
+            </div>
           </div>
           <div className="flex items-center justify-between text-[10px] text-muted">
             <span>Frame {playbackData?.frames?.[playbackIndex]?.frame_number ?? '--'}</span>
@@ -378,6 +398,17 @@ export default function TacticalBoard() {
                 {mode === 'edit' && texts.map(t => (
                   <text key={t.id} x={t.x} y={t.y} fill="#f5f3ff" fontSize="14" fontWeight="700" textAnchor="middle" dominantBaseline="middle">{t.text}</text>
                 ))}
+
+                {mode === 'playback' && showPrediction && [...teamATokens, ...teamBTokens].map(t => t.predicted && (
+                  <g key={`pred_${t.id}`}>
+                    <line x1={t.x} y1={t.y} x2={t.predicted.x} y2={t.predicted.y} stroke="rgba(251,191,36,0.75)" strokeWidth="1.5" strokeDasharray="4 3" />
+                    <circle cx={t.predicted.x} cy={t.predicted.y} r="6" fill="none" stroke="rgba(251,191,36,0.75)" strokeWidth="1.5" strokeDasharray="3 3" />
+                  </g>
+                ))}
+
+                {mode === 'playback' && showLabels && [...teamATokens, ...teamBTokens].map(t => (t.role && t.role !== 'unknown') && (
+                  <text key={`role_${t.id}`} x={t.x} y={t.y + 27} fill="#f5f3ff" fontSize="10" fontWeight="700" textAnchor="middle">{t.role}</text>
+                ))}
               </svg>
 
               {ballPos && (
@@ -404,11 +435,12 @@ export default function TacticalBoard() {
             </div>
 
             {mode === 'playback' && (
-              <div className="mt-3 flex items-center justify-between text-xs text-muted">
+              <div className="mt-3 flex items-center flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
                 <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-purple-500" /> Home Team</span>
                 <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-gray-400" /> Away Team</span>
                 <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-amber-400" /> Ball</span>
-                <span>Refresh browser to reload tracking data if recently completed</span>
+                <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full border border-dashed border-amber-400" /> Predicted position</span>
+                <span className="flex items-center gap-2"><span className="w-3 h-3 rounded-full bg-cyan-500/40 border border-cyan-400" /> Role label</span>
               </div>
             )}
           </div>

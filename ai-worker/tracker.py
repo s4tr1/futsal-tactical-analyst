@@ -107,6 +107,7 @@ class PlayerTracker:
                 "center_y": t["center_y"],
                 "confidence": t["confidence"],
                 "frame_number": frame_number,
+                "bbox": t["bbox"],
             }
             for tid, t in self.active_tracks.items()
             if t["last_frame"] == frame_number or t["lost_frames"] == 0

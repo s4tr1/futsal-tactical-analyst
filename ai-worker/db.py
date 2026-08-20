@@ -39,11 +39,12 @@ class DB:
             )
         cursor.close()
 
-    def insert_player_track(self, match_id, frame_number, tracking_id, x, y, confidence, team="unknown"):
+    def insert_player_track(self, match_id, frame_number, tracking_id, x, y, confidence, team="unknown", x_map=None, y_map=None):
         cursor = self.conn.cursor()
         cursor.execute(
-            "INSERT INTO player_tracks (match_id, frame_number, tracking_id, x, y, confidence, team) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (match_id, frame_number, tracking_id, round(x, 6), round(y, 6), round(confidence, 4), team),
+            "INSERT INTO player_tracks (match_id, frame_number, tracking_id, x, y, confidence, team, x_map, y_map) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)",
+            (match_id, frame_number, tracking_id, round(x, 6), round(y, 6), round(confidence, 4), team,
+             self._round_or_none(x_map), self._round_or_none(y_map)),
         )
         cursor.close()
 
@@ -51,18 +52,21 @@ class DB:
         if not rows:
             return
         cursor = self.conn.cursor()
-        sql = "INSERT INTO player_tracks (match_id, frame_number, tracking_id, x, y, confidence, team) VALUES (%s, %s, %s, %s, %s, %s, %s)"
+        sql = "INSERT INTO player_tracks (match_id, frame_number, tracking_id, x, y, confidence, team, x_map, y_map) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"
         cursor.executemany(sql, [
-            (r[0], r[1], r[2], round(r[3], 6), round(r[4], 6), round(r[5], 4), r[6])
+            (r[0], r[1], r[2], round(r[3], 6), round(r[4], 6), round(r[5], 4), r[6],
+             self._round_or_none(r[7] if len(r) > 7 else None),
+             self._round_or_none(r[8] if len(r) > 8 else None))
             for r in rows
         ])
         cursor.close()
 
-    def insert_ball_track(self, match_id, frame_number, x, y, confidence):
+    def insert_ball_track(self, match_id, frame_number, x, y, confidence, x_map=None, y_map=None):
         cursor = self.conn.cursor()
         cursor.execute(
-            "INSERT INTO ball_tracks (match_id, frame_number, x, y, confidence) VALUES (%s, %s, %s, %s, %s)",
-            (match_id, frame_number, round(x, 6), round(y, 6), round(confidence, 4)),
+            "INSERT INTO ball_tracks (match_id, frame_number, x, y, confidence, x_map, y_map) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (match_id, frame_number, round(x, 6), round(y, 6), round(confidence, 4),
+             self._round_or_none(x_map), self._round_or_none(y_map)),
         )
         cursor.close()
 
@@ -70,12 +74,31 @@ class DB:
         if not rows:
             return
         cursor = self.conn.cursor()
-        sql = "INSERT INTO ball_tracks (match_id, frame_number, x, y, confidence) VALUES (%s, %s, %s, %s, %s)"
+        sql = "INSERT INTO ball_tracks (match_id, frame_number, x, y, confidence, x_map, y_map) VALUES (%s, %s, %s, %s, %s, %s, %s)"
         cursor.executemany(sql, [
-            (r[0], r[1], round(r[2], 6), round(r[3], 6), round(r[4], 4))
+            (r[0], r[1], round(r[2], 6), round(r[3], 6), round(r[4], 4),
+             self._round_or_none(r[5] if len(r) > 5 else None),
+             self._round_or_none(r[6] if len(r) > 6 else None))
             for r in rows
         ])
         cursor.close()
+
+    def update_player_team_batch(self, match_id, team_by_tracking_id):
+        if not team_by_tracking_id:
+            return
+        cursor = self.conn.cursor()
+        sql = "UPDATE player_tracks SET team=%s WHERE match_id=%s AND tracking_id=%s"
+        cursor.executemany(sql, [
+            (team, match_id, tracking_id)
+            for tracking_id, team in team_by_tracking_id.items()
+        ])
+        cursor.close()
+
+    @staticmethod
+    def _round_or_none(value):
+        if value is None:
+            return None
+        return round(value, 6)
 
     def insert_auto_events_batch(self, rows):
         if not rows:
